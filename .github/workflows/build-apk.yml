@@ -21,6 +21,8 @@ jobs:
         with:
           gradle-version: "8.9"
       - name: Build debug APK
+        env:
+          NESHAN_API_KEY: ${{ secrets.NESHAN_API_KEY }}
         run: gradle assembleDebug
       - name: Upload APK
         uses: actions/upload-artifact@v4
