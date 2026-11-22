@@ -4,6 +4,11 @@
         android:label="اسنپ‌یار X"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
+
+        <meta-data
+            android:name="org.maplibre.android.API_KEY"
+            android:value="${MAPLIBRE_API_KEY}" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true">
