@@ -11,19 +11,36 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
-      - name: Build debug APK
-        run: gradle assembleDebug
-      - name: Upload APK
+
+      - name: Restore release keystore
+        env:
+          SNAPYAR_KEYSTORE: ${{ secrets.SNAPYAR_KEYSTORE }}
+        run: |
+          echo "$SNAPYAR_KEYSTORE" | base64 --decode > app/snapyar-release.jks
+
+      - name: Build signed release APK
+        env:
+          SNAPYAR_STORE_PASSWORD: ${{ secrets.SNAPYAR_STORE_PASSWORD }}
+          SNAPYAR_KEY_ALIAS: ${{ secrets.SNAPYAR_KEY_ALIAS }}
+        run: gradle assembleRelease
+
+      - name: Remove keystore from workspace
+        if: always()
+        run: rm -f app/snapyar-release.jks
+
+      - name: Upload signed APK
         uses: actions/upload-artifact@v4
         with:
-          name: snapyar-x-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: snapyar-x-release-apk
+          path: app/build/outputs/apk/release/app-release.apk
