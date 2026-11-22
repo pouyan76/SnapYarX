@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         val neshanKey = System.getenv("NESHAN_API_KEY") ?: ""
-        buildConfigField("String", "NESHAN_API_KEY", "\\"$neshanKey\\"")
+        buildConfigField("String", "NESHAN_API_KEY", "\"$neshanKey\"")
         applicationId = "ir.snapyarx.app"
         minSdk = 23
         targetSdk = 35
