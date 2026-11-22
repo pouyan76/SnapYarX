@@ -15,6 +15,8 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0.0-migration"
+        manifestPlaceholders["MAPLIBRE_API_KEY"] =
+            providers.gradleProperty("NESHAN_API_KEY").orElse("").get()
     }
 
     buildFeatures { compose = true }
