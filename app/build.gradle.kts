@@ -9,6 +9,8 @@ android {
     compileSdk = 35
 
     defaultConfig {
+        val neshanKey = System.getenv("NESHAN_API_KEY") ?: ""
+        buildConfigField("String", "NESHAN_API_KEY", "\\"$neshanKey\\"")
         applicationId = "ir.snapyarx.app"
         minSdk = 23
         targetSdk = 35
@@ -16,7 +18,10 @@ android {
         versionName = "1.0.0"
     }
 
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -32,5 +37,7 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
+    implementation("org.neshan.maplibre:android-sdk-opengl:13.4.1")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
