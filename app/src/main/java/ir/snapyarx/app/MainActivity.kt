@@ -29,6 +29,14 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import org.maplibre.android.MapLibre
+import org.maplibre.android.camera.CameraPosition
+import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.maps.MapView
+import org.maplibre.android.maps.Style
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -63,6 +71,7 @@ data class Entry(
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        MapLibre.getInstance(this)
         setContent { SnapYarApp() }
     }
 }
@@ -646,11 +655,35 @@ fun TripsScreen(
             .fillMaxSize()
             .padding(horizontal = 18.dp)
     ) {
+        Spacer(Modifier.height(12.dp))
+        Text(
+            "نقشه و سفرها",
+            color = White,
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            "نمایش نقشه نشان و سوابق ثبت‌شده",
+            color = Muted,
+            fontSize = 12.sp
+        )
+        Spacer(Modifier.height(12.dp))
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(280.dp),
+            colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+            shape = RoundedCornerShape(18.dp)
+        ) {
+            NeshanMapScreen(Modifier.fillMaxSize())
+        }
+
         Spacer(Modifier.height(16.dp))
         Text(
             "سوابق ثبت‌شده",
             color = White,
-            fontSize = 22.sp,
+            fontSize = 18.sp,
             fontWeight = FontWeight.Bold
         )
         Text(
@@ -658,7 +691,7 @@ fun TripsScreen(
             color = Muted,
             fontSize = 12.sp
         )
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(8.dp))
 
         if (entries.isEmpty()) {
             EmptyState(
@@ -667,12 +700,69 @@ fun TripsScreen(
             )
         } else {
             LazyColumn(
+                modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(bottom = 90.dp)
             ) {
                 items(entries) { EntryRow(it, role) }
             }
         }
     }
+}
+
+@Composable
+fun NeshanMapScreen(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val lifecycle = (context as ComponentActivity).lifecycle
+    val mapView = remember {
+        MapView(context).apply {
+            onCreate(null)
+            getMapAsync { map ->
+                map.setStyle(
+                    Style.Builder().fromUri(
+                        "https://static.neshan.org/sdk/maplibre/styles/light.json"
+                    )
+                )
+                map.cameraPosition = CameraPosition.Builder()
+                    .target(LatLng(35.6892, 51.3890))
+                    .zoom(11.0)
+                    .build()
+            }
+        }
+    }
+
+    DisposableEffect(mapView, lifecycle) {
+        val observer = object : DefaultLifecycleObserver {
+            override fun onStart(owner: LifecycleOwner) {
+                mapView.onStart()
+            }
+
+            override fun onResume(owner: LifecycleOwner) {
+                mapView.onResume()
+            }
+
+            override fun onPause(owner: LifecycleOwner) {
+                mapView.onPause()
+            }
+
+            override fun onStop(owner: LifecycleOwner) {
+                mapView.onStop()
+            }
+
+            override fun onDestroy(owner: LifecycleOwner) {
+                mapView.onDestroy()
+            }
+        }
+        lifecycle.addObserver(observer)
+        onDispose {
+            lifecycle.removeObserver(observer)
+            mapView.onDestroy()
+        }
+    }
+
+    AndroidView(
+        factory = { mapView },
+        modifier = modifier
+    )
 }
 
 @Composable
