@@ -3,7 +3,7 @@ name: Build SnapYar X APK
 on:
   workflow_dispatch:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "backup-restore-safety" ]
 
 jobs:
   build:
