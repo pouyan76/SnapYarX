@@ -2,6 +2,7 @@
 package ir.snapyarx.app
 
 import android.os.Bundle
+import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Canvas
@@ -255,6 +256,7 @@ fun SnapYarApp() {
                         Modifier.padding(padding),
                         onAdd = { showAdd = true },
                         onTrips = { tab = 1 },
+                        onMap = { context.startActivity(Intent(context, MapActivity::class.java)) },
                         recent = current.take(3)
                     )
 
@@ -326,6 +328,7 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
     onAdd: () -> Unit,
     onTrips: () -> Unit,
+    onMap: () -> Unit,
     recent: List<Entry>
 ) {
     LazyColumn(
@@ -466,6 +469,38 @@ fun HomeScreen(
                     Modifier.weight(1f),
                     onTrips
                 )
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onMap() },
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF123D30)),
+                shape = RoundedCornerShape(20.dp)
+            ) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        Modifier
+                            .size(46.dp)
+                            .background(Green.copy(alpha = 0.16f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Map, null, tint = Green, modifier = Modifier.size(25.dp))
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("نقشه و مسیریابی نشان", color = White, fontWeight = FontWeight.Bold)
+                        Text("نمایش نقشه تمام‌صفحه و انتخاب مقصد", color = Muted, fontSize = 11.sp)
+                    }
+                    Icon(Icons.Default.ChevronLeft, null, tint = Green)
+                }
             }
 
             Spacer(Modifier.height(20.dp))
