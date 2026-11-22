@@ -2,7 +2,11 @@
 package ir.snapyarx.app
 
 import android.os.Bundle
+import android.net.Uri
+import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -76,6 +80,39 @@ fun SnapYarApp() {
     var entries by remember { mutableStateOf(loadEntries(prefs)) }
     var tab by remember { mutableIntStateOf(0) }
     var showAdd by remember { mutableStateOf(false) }
+    var pendingBackup by remember { mutableStateOf<Pair<String, List<Entry>>?>(null) }
+    var showRestoreConfirm by remember { mutableStateOf(false) }
+
+    val exportBackupLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri: Uri? ->
+        if (uri != null) {
+            try {
+                val json = createBackupJson(role, entries)
+                context.contentResolver.openOutputStream(uri)?.use { stream ->
+                    stream.write(json.toByteArray(Charsets.UTF_8))
+                } ?: throw IllegalStateException("امکان ایجاد فایل وجود ندارد")
+                Toast.makeText(context, "نسخه پشتیبان ذخیره شد", Toast.LENGTH_LONG).show()
+            } catch (e: Exception) {
+                Toast.makeText(context, "ذخیره پشتیبان ناموفق بود: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    val importBackupLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            try {
+                val json = context.contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
+                    ?: throw IllegalStateException("خواندن فایل ممکن نیست")
+                pendingBackup = parseBackupJson(json)
+                showRestoreConfirm = true
+            } catch (e: Exception) {
+                Toast.makeText(context, "فایل پشتیبان معتبر نیست: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
 
     fun saveRole(value: String) {
         role = value
@@ -273,7 +310,17 @@ fun SnapYarApp() {
 
                     3 -> ToolsScreen(role, Modifier.padding(padding))
 
-                    else -> ProfileScreen(role, Modifier.padding(padding))
+                    else -> ProfileScreen(
+                        role,
+                        Modifier.padding(padding),
+                        onExportBackup = {
+                            val stamp = SimpleDateFormat("yyyyMMdd-HHmm", Locale.US).format(Date())
+                            exportBackupLauncher.launch("snapyar-backup-$stamp.json")
+                        },
+                        onImportBackup = {
+                            importBackupLauncher.launch(arrayOf("application/json", "text/json"))
+                        }
+                    )
                 }
             }
 
@@ -284,6 +331,54 @@ fun SnapYarApp() {
                     onSave = { a, c, n ->
                         addEntry(a, c, n)
                         showAdd = false
+                    }
+                )
+            }
+
+            if (showRestoreConfirm && pendingBackup != null) {
+                AlertDialog(
+                    onDismissRequest = {
+                        showRestoreConfirm = false
+                        pendingBackup = null
+                    },
+                    containerColor = SurfaceDark,
+                    title = { Text("بازیابی نسخه پشتیبان", color = White) },
+                    text = {
+                        Text(
+                            "اطلاعات فایل با اطلاعات فعلی ادغام می‌شود؛ رکوردهای فعلی حذف نخواهند شد. ادامه می‌دهید؟",
+                            color = White
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            val backup = pendingBackup
+                            if (backup != null) {
+                                val merged = (entries + backup.second).distinctBy { it.id }
+                                val saved = prefs.edit()
+                                    .putString("role", backup.first)
+                                    .putString("entries", entriesToJson(merged))
+                                    .commit()
+                                if (saved) {
+                                    role = backup.first
+                                    entries = merged
+                                    Toast.makeText(context, "بازیابی انجام شد؛ اطلاعات قبلی حفظ شدند", Toast.LENGTH_LONG).show()
+                                } else {
+                                    Toast.makeText(context, "ذخیره اطلاعات بازیابی‌شده ناموفق بود", Toast.LENGTH_LONG).show()
+                                }
+                            }
+                            showRestoreConfirm = false
+                            pendingBackup = null
+                        }) {
+                            Text("ادامه و بازیابی", color = Green)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = {
+                            showRestoreConfirm = false
+                            pendingBackup = null
+                        }) {
+                            Text("انصراف", color = Muted)
+                        }
                     }
                 )
             }
@@ -1113,10 +1208,16 @@ fun ToolsScreen(role: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun ProfileScreen(role: String, modifier: Modifier = Modifier) {
+fun ProfileScreen(
+    role: String,
+    modifier: Modifier = Modifier,
+    onExportBackup: () -> Unit,
+    onImportBackup: () -> Unit
+) {
     Column(
         modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(20.dp)
     ) {
         Spacer(Modifier.height(12.dp))
@@ -1156,8 +1257,46 @@ fun ProfileScreen(role: String, modifier: Modifier = Modifier) {
             }
         }
 
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(20.dp))
 
+        Text("پشتیبان‌گیری و بازیابی", color = White, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+        Spacer(Modifier.height(6.dp))
+        Text(
+            "برای محافظت از درآمدها و هزینه‌های ثبت‌شده، یک فایل پشتیبان در حافظه گوشی ذخیره کنید.",
+            color = Muted,
+            fontSize = 12.sp
+        )
+        Spacer(Modifier.height(12.dp))
+
+        Button(
+            onClick = onExportBackup,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Bg)
+        ) {
+            Icon(Icons.Default.SaveAlt, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text("ذخیره نسخه پشتیبان")
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        OutlinedButton(
+            onClick = onImportBackup,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = Green)
+        ) {
+            Icon(Icons.Default.Restore, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text("بازیابی از فایل پشتیبان")
+        }
+
+        Spacer(Modifier.height(14.dp))
+        Text(
+            "هنگام بازیابی، اطلاعات فایل با اطلاعات فعلی ادغام می‌شود و رکوردهای فعلی حذف نمی‌شوند. فایل پشتیبان را در جای امنی نگه دارید.",
+            color = Muted,
+            fontSize = 11.sp
+        )
+        Spacer(Modifier.height(20.dp))
         Text(
             "اطلاعات شما به سرور ارسال نمی‌شود. با حذف داده‌های برنامه ممکن است اطلاعات محلی نیز پاک شود.",
             color = Muted,
@@ -1308,12 +1447,8 @@ fun loadEntries(
     }
 }
 
-fun saveEntries(
-    prefs: android.content.SharedPreferences,
-    entries: List<Entry>
-) {
+fun entriesToJson(entries: List<Entry>): String {
     val array = JSONArray()
-
     entries.forEach { e ->
         array.put(
             JSONObject()
@@ -1325,8 +1460,52 @@ fun saveEntries(
                 .put("date", e.date)
         )
     }
+    return array.toString()
+}
 
+fun createBackupJson(role: String, entries: List<Entry>): String {
+    return JSONObject()
+        .put("app", "SnapYarX")
+        .put("backup_version", 1)
+        .put("created_at", System.currentTimeMillis())
+        .put("role", role)
+        .put("entries", JSONArray(entriesToJson(entries)))
+        .toString(2)
+}
+
+fun parseBackupJson(json: String): Pair<String, List<Entry>> {
+    val root = JSONObject(json)
+    require(root.optString("app") == "SnapYarX") { "این فایل متعلق به اسنپ‌یار X نیست" }
+    require(root.optInt("backup_version", -1) == 1) { "نسخه فایل پشتیبان پشتیبانی نمی‌شود" }
+
+    val restoredRole = root.optString("role", "driver")
+    require(restoredRole == "driver" || restoredRole == "passenger") { "نوع حساب نامعتبر است" }
+
+    val array = root.optJSONArray("entries") ?: throw IllegalArgumentException("فهرست اطلاعات در فایل وجود ندارد")
+    val restoredEntries = (0 until array.length()).map { i ->
+        val o = array.getJSONObject(i)
+        val entryRole = o.getString("role")
+        require(entryRole == "driver" || entryRole == "passenger") { "یکی از رکوردها نوع نامعتبر دارد" }
+        val amount = o.getLong("amount")
+        val cost = o.optLong("cost", 0L)
+        require(amount >= 0L && cost >= 0L) { "مبلغ نامعتبر در فایل وجود دارد" }
+        Entry(
+            id = o.getLong("id"),
+            role = entryRole,
+            amount = amount,
+            cost = cost,
+            note = o.optString("note", ""),
+            date = o.optString("date", "")
+        )
+    }
+    return restoredRole to restoredEntries
+}
+
+fun saveEntries(
+    prefs: android.content.SharedPreferences,
+    entries: List<Entry>
+) {
     prefs.edit()
-        .putString("entries", array.toString())
+        .putString("entries", entriesToJson(entries))
         .apply()
 }
