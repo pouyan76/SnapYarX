@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
@@ -44,10 +45,11 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-private val Bg = Color(0xFF0B100F)
-private val SurfaceDark = Color(0xFF151D1A)
-private val Surface2 = Color(0xFF1D2924)
-private val Green = Color(0xFF19C784)
+private val Bg = Color(0xFF07130F)
+private val SurfaceDark = Color(0xFF10221B)
+private val Surface2 = Color(0xFF173528)
+private val Green = Color(0xFF2DE0A0)
+private val Gold = Color(0xFFF2C66D)
 private val Muted = Color(0xFF9BAAA2)
 private val White = Color(0xFFF4F8F5)
 private val Red = Color(0xFFFF6B6B)
@@ -194,7 +196,7 @@ fun SnapYarApp() {
 
                             Column(Modifier.weight(1f)) {
                                 Text(
-                                    "اسنپ‌یار X",
+                                    "اسپکس‌یار",
                                     fontSize = 21.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = White
@@ -479,156 +481,148 @@ fun HomeScreen(
     recent: List<Entry>
 ) {
     LazyColumn(
-        modifier
-            .fillMaxSize()
-            .padding(horizontal = 18.dp),
-        contentPadding = PaddingValues(bottom = 90.dp)
+        modifier.fillMaxSize().padding(horizontal = 18.dp),
+        contentPadding = PaddingValues(top = 10.dp, bottom = 100.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
-            Spacer(Modifier.height(8.dp))
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        if (role == "driver") "داشبورد راننده" else "داشبورد مسافر",
+                        color = White, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold
+                    )
+                    Text("نمای کلی عملکرد و مدیریت سفرها", color = Muted, fontSize = 12.sp)
+                }
+                Box(
+                    Modifier.size(44.dp).background(Gold.copy(alpha = .13f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.AutoGraph, null, tint = Gold, modifier = Modifier.size(23.dp))
+                }
+            }
+        }
 
-            Text(
-                if (role == "driver") "داشبورد راننده" else "داشبورد مسافر",
-                color = White,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold
-            )
+        item {
+            Box(
+                Modifier.fillMaxWidth()
+                    .background(
+                        Brush.linearGradient(listOf(Color(0xFF145B43), Color(0xFF102B23), Color(0xFF273B2D))),
+                        RoundedCornerShape(26.dp)
+                    )
+                    .padding(20.dp)
+            ) {
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            Modifier.size(38.dp).background(Color.White.copy(alpha = .12f), RoundedCornerShape(13.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.DirectionsCar, null, tint = Gold)
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Column {
+                            Text("SPEX YAR", color = Gold, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text("هر سفر، یک حساب؛ هر روز، یک سود", color = White, fontSize = 12.sp)
+                        }
+                    }
+                    Spacer(Modifier.height(22.dp))
+                    Text(
+                        if (role == "driver") "سود خالص ثبت‌شده" else "مجموع هزینه سفرها",
+                        color = Color.White.copy(alpha = .76f), fontSize = 12.sp
+                    )
+                    Spacer(Modifier.height(5.dp))
+                    Text(
+                        "${money(if (role == "driver") net else costs)} تومان",
+                        color = if (role == "driver" && net < 0) Red else White,
+                        fontSize = 29.sp, fontWeight = FontWeight.ExtraBold
+                    )
+                    Spacer(Modifier.height(13.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Verified, null, tint = Gold, modifier = Modifier.size(15.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            if (role == "driver") "محاسبه بر اساس درآمد و هزینه‌های ثبت‌شده" else "بر اساس هزینه‌های ثبت‌شده شما",
+                            color = Color.White.copy(alpha = .72f), fontSize = 10.sp
+                        )
+                    }
+                }
+            }
+        }
 
-            Text("خلاصه عملکرد شما", color = Muted, fontSize = 12.sp)
-            Spacer(Modifier.height(18.dp))
-
+        item {
             if (role == "driver") {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    MetricCard(
-                        "درآمد ثبت‌شده",
-                        money(income),
-                        Icons.Default.AccountBalanceWallet,
-                        Modifier.weight(1f)
-                    )
-                    MetricCard(
-                        "هزینه‌ها",
-                        money(costs),
-                        Icons.Default.Payments,
-                        Modifier.weight(1f),
-                        Red
-                    )
-                }
-
-                Spacer(Modifier.height(10.dp))
-
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = Surface2
-                    ),
-                    shape = RoundedCornerShape(20.dp)
-                ) {
-                    Column(
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(18.dp)
-                    ) {
-                        Text("سود خالص", color = Muted, fontSize = 13.sp)
-                        Spacer(Modifier.height(5.dp))
-                        Text(
-                            "${money(net)} تومان",
-                            color = if (net >= 0) Green else Red,
-                            fontSize = 27.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            "بر اساس اطلاعاتی که ثبت کرده‌اید",
-                            color = Muted,
-                            fontSize = 11.sp
-                        )
-                    }
+                    MetricCard("درآمد ثبت‌شده", money(income), Icons.Default.AccountBalanceWallet, Modifier.weight(1f), Green)
+                    MetricCard("هزینه‌ها", money(costs), Icons.Default.Payments, Modifier.weight(1f), Red)
                 }
             } else {
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = Surface2
-                    ),
-                    shape = RoundedCornerShape(20.dp)
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    MetricCard("سفرهای ثبت‌شده", count.toString(), Icons.Default.Route, Modifier.weight(1f), Green)
+                    MetricCard("میانگین هزینه", money(if (count > 0) costs / count else 0), Icons.Default.Calculate, Modifier.weight(1f), Gold)
+                }
+            }
+        }
+
+        item {
+            Card(
+                Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+                shape = RoundedCornerShape(22.dp)
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(Modifier.padding(18.dp)) {
-                        Text("مجموع هزینه سفرها", color = Muted)
-                        Spacer(Modifier.height(5.dp))
-                        Text(
-                            "${money(costs)} تومان",
-                            color = Green,
-                            fontSize = 27.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            "تعداد سفرهای ثبت‌شده: $count",
-                            color = Muted,
-                            fontSize = 11.sp
-                        )
+                    Column(Modifier.weight(1f)) {
+                        Text("مدیریت هوشمند سفر", color = White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Spacer(Modifier.height(4.dp))
+                        Text("ثبت جزئیات، کنترل هزینه و بررسی عملکرد", color = Muted, fontSize = 11.sp)
+                    }
+                    Box(
+                        Modifier.size(42.dp).background(Gold.copy(alpha = .13f), RoundedCornerShape(14.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Insights, null, tint = Gold)
                     }
                 }
-
-                Spacer(Modifier.height(10.dp))
-
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    MetricCard(
-                        "سفرهای ثبت‌شده",
-                        count.toString(),
-                        Icons.Default.Route,
-                        Modifier.weight(1f)
-                    )
-                    MetricCard(
-                        "میانگین هزینه",
-                        money(if (count > 0) costs / count else 0),
-                        Icons.Default.Calculate,
-                        Modifier.weight(1f)
-                    )
-                }
             }
+        }
 
-            Spacer(Modifier.height(20.dp))
-
+        item {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    "دسترسی سریع",
-                    color = White,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
-                )
-                Text(
-                    "مشاهده همه",
-                    color = Green,
-                    fontSize = 12.sp,
-                    modifier = Modifier.clickable { onTrips() }
-                )
+                Text("دسترسی سریع", color = White, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Text("سوابق سفر", color = Gold, fontSize = 12.sp, modifier = Modifier.clickable { onTrips() })
             }
-
-            Spacer(Modifier.height(10.dp))
-
+            Spacer(Modifier.height(9.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 QuickAction(
                     if (role == "driver") "ثبت درآمد و هزینه" else "ثبت هزینه سفر",
-                    Icons.Default.Add,
-                    Modifier.weight(1f),
-                    onAdd
+                    Icons.Default.AddCircle, Modifier.weight(1f), onAdd
                 )
-                QuickAction(
-                    "مشاهده سوابق",
-                    Icons.Default.Insights,
-                    Modifier.weight(1f),
-                    onTrips
-                )
+                QuickAction("مشاهده سوابق", Icons.Default.History, Modifier.weight(1f), onTrips)
             }
+        }
 
-            Spacer(Modifier.height(20.dp))
-            Text("آخرین فعالیت‌ها", color = White, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(8.dp))
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("آخرین فعالیت‌ها", color = White, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Text("${recent.size} مورد", color = Muted, fontSize = 11.sp)
+            }
         }
 
         if (recent.isEmpty()) {
             item {
-                EmptyState(
-                    "هنوز موردی ثبت نشده است",
-                    "برای شروع، اولین سفر یا هزینه خود را ثبت کنید."
-                )
+                Card(
+                    Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+                    shape = RoundedCornerShape(20.dp)
+                ) {
+                    EmptyState("هنوز موردی ثبت نشده است", "برای شروع، اولین سفر یا هزینه خود را ثبت کنید.")
+                }
             }
         } else {
             items(recent) { EntryRow(it, role) }
@@ -1401,7 +1395,7 @@ fun ProfileScreen(
                     .padding(18.dp)
             ) {
                 Text(
-                    "اسنپ‌یار X",
+                    "اسپکس‌یار",
                     color = White,
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp
@@ -1635,7 +1629,7 @@ fun createBackupJson(role: String, entries: List<Entry>): String {
 
 fun parseBackupJson(json: String): Pair<String, List<Entry>> {
     val root = JSONObject(json)
-    require(root.optString("app") == "SnapYarX") { "این فایل متعلق به اسنپ‌یار X نیست" }
+    require(root.optString("app") == "SnapYarX") { "این فایل متعلق به اسپکس‌یار نیست" }
     require(root.optInt("backup_version", -1) == 1) { "نسخه فایل پشتیبان پشتیبانی نمی‌شود" }
 
     val restoredRole = root.optString("role", "driver")
