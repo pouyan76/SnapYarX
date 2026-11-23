@@ -3,6 +3,7 @@ package ir.snapyarx.app
 
 import android.os.Bundle
 import android.net.Uri
+import android.content.Intent
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -82,6 +83,8 @@ fun SnapYarApp() {
     var showAdd by remember { mutableStateOf(false) }
     var pendingBackup by remember { mutableStateOf<Pair<String, List<Entry>>?>(null) }
     var showRestoreConfirm by remember { mutableStateOf(false) }
+    var showNavigator by remember { mutableStateOf(false) }
+    var destination by remember { mutableStateOf("") }
 
     val exportBackupLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -308,7 +311,7 @@ fun SnapYarApp() {
                         Modifier.padding(padding)
                     )
 
-                    3 -> ToolsScreen(role, Modifier.padding(padding))
+                    3 -> ToolsScreen(role, Modifier.padding(padding), onOpenNavigator = { showNavigator = true })
 
                     else -> ProfileScreen(
                         role,
@@ -331,6 +334,58 @@ fun SnapYarApp() {
                     onSave = { a, c, n ->
                         addEntry(a, c, n)
                         showAdd = false
+                    }
+                )
+            }
+
+            if (showNavigator) {
+                AlertDialog(
+                    onDismissRequest = { showNavigator = false },
+                    containerColor = SurfaceDark,
+                    title = { Text("نقشه و مسیریاب اسپکس", color = White) },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text("مقصد را وارد کنید؛ مسیر در Google Maps باز می‌شود.", color = Muted, fontSize = 12.sp)
+                            OutlinedTextField(
+                                value = destination,
+                                onValueChange = { destination = it },
+                                label = { Text("آدرس یا نام مقصد") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = fieldColors()
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(
+                            enabled = destination.isNotBlank(),
+                            onClick = {
+                                val target = destination.trim()
+                                try {
+                                    val navigationIntent = Intent(
+                                        Intent.ACTION_VIEW,
+                                        Uri.parse("google.navigation:q=" + Uri.encode(target))
+                                    ).apply { setPackage("com.google.android.apps.maps") }
+                                    context.startActivity(navigationIntent)
+                                } catch (_: Exception) {
+                                    try {
+                                        val mapIntent = Intent(
+                                            Intent.ACTION_VIEW,
+                                            Uri.parse("geo:0,0?q=" + Uri.encode(target))
+                                        )
+                                        context.startActivity(Intent.createChooser(mapIntent, "انتخاب نقشه"))
+                                    } catch (_: Exception) {
+                                        Toast.makeText(context, "برنامه نقشه‌ای روی گوشی پیدا نشد", Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                                showNavigator = false
+                            }
+                        ) { Text("مسیریابی", color = Green) }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showNavigator = false }) {
+                            Text("انصراف", color = Muted)
+                        }
                     }
                 )
             }
@@ -1142,7 +1197,7 @@ fun parseEntryDate(value: String): Date? {
 }
 
 @Composable
-fun ToolsScreen(role: String, modifier: Modifier = Modifier) {
+fun ToolsScreen(role: String, modifier: Modifier = Modifier, onOpenNavigator: () -> Unit) {
     Column(
         modifier
             .fillMaxSize()
@@ -1161,6 +1216,7 @@ fun ToolsScreen(role: String, modifier: Modifier = Modifier) {
 
         val tools = if (role == "driver") {
             listOf(
+                "نقشه و مسیریاب" to Icons.Default.Map,
                 "ماشین‌حساب سود سفر" to Icons.Default.Calculate,
                 "محاسبه هزینه سوخت" to Icons.Default.LocalGasStation,
                 "یادآور سرویس خودرو" to Icons.Default.Build,
@@ -1168,6 +1224,7 @@ fun ToolsScreen(role: String, modifier: Modifier = Modifier) {
             )
         } else {
             listOf(
+                "نقشه و مسیریاب" to Icons.Default.Map,
                 "ماشین‌حساب هزینه سفر" to Icons.Default.Calculate,
                 "چک‌لیست وسایل سفر" to Icons.Default.Checklist,
                 "یادداشت مقصدها" to Icons.Default.Map,
@@ -1179,7 +1236,8 @@ fun ToolsScreen(role: String, modifier: Modifier = Modifier) {
             Card(
                 Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 5.dp),
+                    .padding(vertical = 5.dp)
+                    .clickable { if (title == "نقشه و مسیریاب") onOpenNavigator() },
                 colors = CardDefaults.cardColors(
                     containerColor = SurfaceDark
                 ),
