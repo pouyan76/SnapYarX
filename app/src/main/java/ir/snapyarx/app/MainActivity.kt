@@ -1151,6 +1151,7 @@ fun parseEntryDate(value: String): Date? {
 @Composable
 fun NavigatorScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
+    var navigatorStatus by remember { mutableStateOf("در حال بارگذاری نقشه…") }
     var hasLocationPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
@@ -1178,13 +1179,24 @@ fun NavigatorScreen(modifier: Modifier = Modifier) {
             modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
                 WebView(ctx).apply {
+                    setBackgroundColor(android.graphics.Color.WHITE)
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
+                    settings.loadsImagesAutomatically = true
                     settings.setGeolocationEnabled(true)
                     webViewClient = object : WebViewClient() {
                         override fun onPageFinished(view: WebView?, url: String?) {
                             super.onPageFinished(view, url)
-                            view?.postDelayed({ view.evaluateJavascript("if(window.map){map.invalidateSize(true)}", null) }, 500)
+                            navigatorStatus = "صفحه نقشه بارگذاری شد؛ در حال آماده‌سازی نقشه…"
+                            view?.postDelayed({
+                                view.evaluateJavascript("if(window.map){map.invalidateSize(true)}; if(!window.L){document.getElementById('status').innerText='کتابخانه نقشه بارگذاری نشده است.'}", null)
+                            }, 500)
+                        }
+                        override fun onReceivedError(view: WebView?, request: android.webkit.WebResourceRequest?, error: android.webkit.WebResourceError?) {
+                            super.onReceivedError(view, request, error)
+                            if (request?.isForMainFrame == true) {
+                                navigatorStatus = "بارگذاری صفحه نقشه ناموفق بود؛ اتصال اینترنت یا WebView گوشی را بررسی کنید."
+                            }
                         }
                     }
                     webChromeClient = object : WebChromeClient() {
@@ -1291,6 +1303,13 @@ fun NavigatorScreen(modifier: Modifier = Modifier) {
                     )
                 }
             }
+        )
+        Text(
+            text = navigatorStatus,
+            modifier = Modifier.align(Alignment.TopCenter).padding(8.dp)
+                .background(Color.White.copy(alpha = 0.94f), RoundedCornerShape(10.dp))
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            color = Color(0xFF17243A), fontSize = 11.sp
         )
     }
 }
