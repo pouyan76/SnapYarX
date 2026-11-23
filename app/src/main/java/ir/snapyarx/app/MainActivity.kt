@@ -52,14 +52,15 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-private val Bg = Color(0xFF07130F)
-private val SurfaceDark = Color(0xFF10221B)
-private val Surface2 = Color(0xFF173528)
-private val Green = Color(0xFF2DE0A0)
-private val Gold = Color(0xFFF2C66D)
-private val Muted = Color(0xFF9BAAA2)
-private val White = Color(0xFFF4F8F5)
-private val Red = Color(0xFFFF6B6B)
+// Premium light palette: white surfaces, blue primary actions, red highlights
+private val Bg = Color(0xFFF4F7FC)
+private val SurfaceDark = Color(0xFFFFFFFF)
+private val Surface2 = Color(0xFFEAF1FB)
+private val Green = Color(0xFF1769E0)
+private val Gold = Color(0xFFE34B5B)
+private val Muted = Color(0xFF68778D)
+private val White = Color(0xFF17243A)
+private val Red = Color(0xFFD92D3F)
 
 data class Entry(
     val id: Long,
@@ -466,7 +467,7 @@ fun HomeScreen(
             Box(
                 Modifier.fillMaxWidth()
                     .background(
-                        Brush.linearGradient(listOf(Color(0xFF145B43), Color(0xFF102B23), Color(0xFF273B2D))),
+                        Brush.linearGradient(listOf(Color(0xFF1458C8), Color(0xFF2678E8), Color(0xFF4C91EF))),
                         RoundedCornerShape(26.dp)
                     )
                     .padding(20.dp)
@@ -1199,18 +1200,18 @@ fun NavigatorScreen(modifier: Modifier = Modifier) {
                         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
                         <style>
                         *{box-sizing:border-box}
-                        html,body{height:100%;width:100%;margin:0;overflow:hidden;font-family:Tahoma,Arial;background:#07130f;color:#fff}
+                        html,body{height:100%;width:100%;margin:0;overflow:hidden;font-family:Tahoma,Arial;background:#f4f7fc;color:#17243a}
                         body{display:flex;flex-direction:column}
                         #map{flex:1 1 auto;min-height:0;width:100%;order:1}
-                        #status{flex:0 0 auto;order:2;font-size:11px;color:#b7c8bf;padding:7px 12px;background:#10221b;border-top:1px solid #28483a}
+                        #status{flex:0 0 auto;order:2;font-size:11px;color:#b7c8bf;padding:7px 12px;background:#ffffff;border-top:1px solid #28483a}
                         #panel{flex:0 0 auto;order:3;padding:12px 14px 16px;background:#10221b;display:flex;gap:9px;flex-wrap:wrap;box-shadow:0 -5px 18px rgba(0,0,0,.22)}
-                        input{width:100%;padding:13px;border:1px solid #416452;border-radius:12px;background:#173528;color:white;font-size:14px;outline:none}
-                        input::placeholder{color:#9baaa2}
+                        input{width:100%;padding:13px;border:1px solid #d5dfed;border-radius:12px;background:#f4f7fc;color:#17243a;font-size:14px;outline:none}
+                        input::placeholder{color:#68778d}
                         .field{width:100%;display:flex;align-items:center;gap:8px}
                         .field label{min-width:42px;color:#f2c66d;font-size:12px;font-weight:bold}
-                        button{border:0;border-radius:12px;padding:13px 14px;background:#2de0a0;color:#07130f;font-weight:bold;font-size:13px}
+                        button{border:0;border-radius:12px;padding:13px 14px;background:#1769e0;color:#ffffff;font-weight:bold;font-size:13px}
                         button.primary{flex:1}
-                        button.secondary{background:#28483a;color:#fff}
+                        button.secondary{background:#e34b5b;color:#ffffff}
                         </style></head><body>
                         <div id="map"></div>
                         <div id="status">نقشه آماده است؛ مبدأ و مقصد را در کادر پایین وارد کنید.</div>
