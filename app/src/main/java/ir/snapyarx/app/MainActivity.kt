@@ -1182,8 +1182,6 @@ fun NavigatorScreen(modifier: Modifier = Modifier) {
             factory = { ctx ->
                 WebView(ctx).apply {
                     setBackgroundColor(android.graphics.Color.WHITE)
-                    // رندر نرم‌افزاری برای جلوگیری از سفید ماندن لایه‌های تصویر در بعضی WebViewها
-                    setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null)
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
                     settings.loadsImagesAutomatically = true
@@ -1237,15 +1235,8 @@ fun NavigatorScreen(modifier: Modifier = Modifier) {
                         <meta name="viewport" content="width=device-width, initial-scale=1.0">
                         <link id="leaflet-css" rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" onload="window.leafletCssLoaded=true" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';this.onerror=function(){window.leafletCssLoaded=false}">
                         <style>
-                        /* حداقل استایل‌های ضروری Leaflet؛ حتی در صورت خطای CDN */
-                        .leaflet-container{position:relative;overflow:hidden;background:#ddd;outline:0}
-                        .leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile-container,.leaflet-map-pane svg,.leaflet-map-pane canvas{position:absolute;left:0;top:0}
-                        .leaflet-pane{z-index:400}.leaflet-tile-pane{z-index:200}.leaflet-overlay-pane{z-index:400}.leaflet-shadow-pane{z-index:500}.leaflet-marker-pane{z-index:600}.leaflet-tooltip-pane{z-index:650}.leaflet-popup-pane{z-index:700}
-                        .leaflet-tile{visibility:visible!important;max-width:none!important;max-height:none!important;opacity:1!important;display:block!important}.leaflet-tile-loaded{visibility:visible!important;opacity:1!important}
-                        #map{position:relative!important;overflow:hidden!important;background:#dce7ef!important;isolation:isolate}
-                        #map .leaflet-container{width:100%!important;height:100%!important}
-                        #map .leaflet-tile-pane{z-index:200!important}
-                        #map .leaflet-tile-container{pointer-events:none}
+                        /* چیدمان لایه‌های داخلی Leaflet فقط توسط CSS رسمی خود کتابخانه مدیریت می‌شود */
+                        #map{position:relative!important;overflow:hidden!important;background:#dce7ef!important;width:100%;height:55vh;min-height:320px}
                          #maptools{position:absolute;z-index:5000;top:12px;right:12px;display:flex;flex-direction:column;gap:6px}
                          #maptools button{display:block;width:44px;height:44px;padding:0;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#17243a;font-size:28px;font-weight:bold;box-shadow:0 2px 8px rgba(0,0,0,.2)}
                          body{position:relative}
