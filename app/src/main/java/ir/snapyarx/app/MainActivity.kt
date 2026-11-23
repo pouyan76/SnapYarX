@@ -1190,7 +1190,7 @@ fun NavigatorScreen(modifier: Modifier = Modifier) {
                             navigatorStatus = "صفحه نقشه بارگذاری شد؛ در حال آماده‌سازی نقشه…"
                             view?.postDelayed({
                                 view.evaluateJavascript(
-                                    "(function(){var el=document.getElementById('map');var st=document.getElementById('status');return 'Leaflet='+(!!window.L)+' | Map='+(!!window.map)+' | MapHeight='+(el?el.clientHeight:0)+' | '+(st?st.innerText:'بدون پیام وضعیت')})()",
+                                    "(function(){var el=document.getElementById('map');var st=document.getElementById('status');var p=el&&el.querySelector('.leaflet-pane');var imgs=el?el.querySelectorAll('img.leaflet-tile'):[];return 'Leaflet='+(!!window.L)+' | Map='+(!!window.map)+' | CSS='+(window.leafletCssLoaded===true?'OK':'FAIL/UNKNOWN')+' | MapHeight='+(el?el.clientHeight:0)+' | Pane='+(p?'yes':'no')+' | Tiles='+imgs.length+' | '+(st?st.innerText:'بدون پیام وضعیت')})()",
                                     { value ->
                                         val diagnostic = value?.removeSurrounding("\"")?.replace("\\n", " ") ?: "وضعیت نقشه قابل خواندن نیست"
                                         navigatorStatus = diagnostic
@@ -1221,8 +1221,18 @@ fun NavigatorScreen(modifier: Modifier = Modifier) {
                         """
                         <!DOCTYPE html><html lang="fa"><head><meta charset="utf-8">
                         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css'">
+                        <link id="leaflet-css" rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" onload="window.leafletCssLoaded=true" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';this.onerror=function(){window.leafletCssLoaded=false}">
                         <style>
+                        /* حداقل استایل‌های ضروری Leaflet؛ حتی در صورت خطای CDN */
+                        .leaflet-container{position:relative;overflow:hidden;background:#ddd;outline:0}
+                        .leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile-container,.leaflet-map-pane svg,.leaflet-map-pane canvas{position:absolute;left:0;top:0}
+                        .leaflet-pane{z-index:400}.leaflet-tile-pane{z-index:200}.leaflet-overlay-pane{z-index:400}.leaflet-shadow-pane{z-index:500}.leaflet-marker-pane{z-index:600}.leaflet-tooltip-pane{z-index:650}.leaflet-popup-pane{z-index:700}
+                        .leaflet-tile{visibility:hidden;max-width:none!important;max-height:none!important}.leaflet-tile-loaded{visibility:inherit}
+                        .leaflet-zoom-box{position:absolute;width:0;height:0;box-sizing:border-box;z-index:800}
+                        .leaflet-control{position:relative;z-index:800;pointer-events:auto;float:left;clear:both}
+                        .leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none}.leaflet-top{top:0}.leaflet-right{right:0}.leaflet-left{left:0}.leaflet-bottom{bottom:0}
+                        .leaflet-control-zoom a{display:block;width:30px;height:30px;line-height:30px;text-align:center;background:#fff;color:#222;text-decoration:none;font-size:20px}
+                        .leaflet-control-attribution{background:rgba(255,255,255,.8);padding:2px 5px;font-size:10px}
                         *{box-sizing:border-box}
                         html,body{height:100%;min-height:100%;width:100%;margin:0;overflow:hidden;font-family:Tahoma,Arial;background:#f4f7fc;color:#17243a}
                         body{height:100vh;min-height:100vh;display:flex;flex-direction:column}
@@ -1252,10 +1262,14 @@ fun NavigatorScreen(modifier: Modifier = Modifier) {
                         function initMap(){
                           if(!window.L){status('کتابخانه نقشه در دسترس نیست.');return}
                           map=L.map('map',{zoomControl:true}).setView([35.7,51.4],5);
-                          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
-                          map.on('tileerror',()=>status('نقشه باز شد، اما دریافت تصویر خیابان‌ها با مشکل روبه‌رو شد.'));
-                          setTimeout(()=>{map.invalidateSize(true);status('نقشه آماده است؛ مبدأ و مقصد را وارد کنید.')},400);
-                          setTimeout(()=>map&&map.invalidateSize(true),1200);
+                          let loadedTiles=0,failedTiles=0;
+                          const tiles=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'});
+                          tiles.on('tileload',()=>{loadedTiles++;status('نقشه در حال نمایش است؛ تصاویر دریافت‌شده: '+loadedTiles)});
+                          tiles.on('tileerror',()=>{failedTiles++;status('خطای دریافت تصاویر نقشه؛ موفق: '+loadedTiles+' | ناموفق: '+failedTiles)});
+                          tiles.addTo(map);
+                          map.whenReady(()=>status('نقشه آماده شد؛ در انتظار دریافت تصاویر خیابان‌ها…'));
+                          setTimeout(()=>{map.invalidateSize(true);status('CSS نقشه: '+(window.leafletCssLoaded===true?'بارگذاری شد':'نامشخص/ناموفق')+' | ارتفاع: '+document.getElementById('map').clientHeight+' | کاشی‌ها: '+loadedTiles)},900);
+                          setTimeout(()=>map&&map.invalidateSize(true),1800);
                         }
                         function loadLeaflet(url,fallback){
                           const script=document.createElement('script');script.src=url;
