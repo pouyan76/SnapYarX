@@ -1152,6 +1152,7 @@ fun parseEntryDate(value: String): Date? {
 fun NavigatorScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     var navigatorStatus by remember { mutableStateOf("در حال بارگذاری نقشه…") }
+    var reloadKey by remember { mutableIntStateOf(0) }
     var hasLocationPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
@@ -1175,6 +1176,7 @@ fun NavigatorScreen(modifier: Modifier = Modifier) {
     }
 
     Box(modifier.fillMaxSize().background(Bg)) {
+        key(reloadKey) {
         AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
@@ -1334,7 +1336,38 @@ fun NavigatorScreen(modifier: Modifier = Modifier) {
                 }
             }
         )
+        }
 
+        Card(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(10.dp)
+                .widthIn(max = 310.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 5.dp),
+            shape = RoundedCornerShape(14.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(start = 12.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = navigatorStatus,
+                    modifier = Modifier.weight(1f),
+                    color = Color(0xFF17243A),
+                    fontSize = 10.sp,
+                    maxLines = 3
+                )
+                IconButton(
+                    onClick = {
+                        navigatorStatus = "در حال بارگذاری دوباره نقشه…"
+                        reloadKey++
+                    }
+                ) {
+                    Icon(Icons.Default.Refresh, contentDescription = "تلاش مجدد", tint = Green)
+                }
+            }
+        }
     }
 }
 
