@@ -38,6 +38,8 @@ jobs:
           SNAPYAR_STORE_PASSWORD: ${{ secrets.SNAPYAR_STORE_PASSWORD }}
           SNAPYAR_KEY_ALIAS: ${{ secrets.SNAPYAR_KEY_ALIAS }}
         run: |
+          echo "Actual restored keystore SHA256:"
+          sha256sum app/snapyar-release.jks
           echo "5a374f9f078007603a1ea2bd41669b516682cc5eec0fb482295c36b162a395f3  app/snapyar-release.jks" | sha256sum --check
           keytool -list -keystore app/snapyar-release.jks -storepass "$SNAPYAR_STORE_PASSWORD" -alias "$SNAPYAR_KEY_ALIAS" > /dev/null
           echo "Keystore file, store password, and alias are valid."
