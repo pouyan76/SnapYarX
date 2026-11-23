@@ -1172,131 +1172,116 @@ fun NavigatorScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    Column(
-        modifier.fillMaxSize().background(Bg).padding(12.dp)
-    ) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text("مسیریابی هوشمند", color = White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
-                Text("نقشه زنده • مسیریابی داخل اسپکس‌یار", color = Muted, fontSize = 11.sp)
-            }
-            Icon(Icons.Default.Explore, null, tint = Gold, modifier = Modifier.size(28.dp))
-        }
-        Card(
-            Modifier.weight(1f).fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = SurfaceDark),
-            shape = RoundedCornerShape(20.dp)
-        ) {
-            AndroidView(
-                modifier = Modifier.fillMaxSize(),
-                factory = { ctx ->
-                    WebView(ctx).apply {
-                        settings.javaScriptEnabled = true
-                        settings.domStorageEnabled = true
-                        settings.setGeolocationEnabled(true)
-                        webViewClient = WebViewClient()
-                        webChromeClient = object : WebChromeClient() {
-                            override fun onGeolocationPermissionsShowPrompt(
-                                origin: String,
-                                callback: android.webkit.GeolocationPermissions.Callback
-                            ) {
-                                val granted = ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
-                                    ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                                callback.invoke(origin, granted, false)
-                            }
+    Box(modifier.fillMaxSize().background(Bg)) {
+        AndroidView(
+            modifier = Modifier.fillMaxSize(),
+            factory = { ctx ->
+                WebView(ctx).apply {
+                    settings.javaScriptEnabled = true
+                    settings.domStorageEnabled = true
+                    settings.setGeolocationEnabled(true)
+                    webViewClient = WebViewClient()
+                    webChromeClient = object : WebChromeClient() {
+                        override fun onGeolocationPermissionsShowPrompt(
+                            origin: String,
+                            callback: android.webkit.GeolocationPermissions.Callback
+                        ) {
+                            val granted = ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                                ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                            callback.invoke(origin, granted, false)
                         }
-                        loadDataWithBaseURL(
-                            "https://openstreetmap.org/",
-                            """
-                            <!DOCTYPE html><html lang="fa"><head><meta charset="utf-8">
-                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                            <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-                            <style>
-                            *{box-sizing:border-box}body{margin:0;font-family:Tahoma,Arial;background:#07130f;color:#fff}
-                            #panel{padding:10px;background:#10221b;display:flex;gap:7px;flex-wrap:wrap}
-                            input{width:100%;padding:12px;border:1px solid #416452;border-radius:10px;background:#173528;color:white;font-size:14px}
-                            .field{width:100%;display:flex;align-items:center;gap:7px}
-                            .field label{min-width:42px;color:#f2c66d;font-size:12px;font-weight:bold}
-                            button{border:0;border-radius:10px;padding:11px 13px;background:#2de0a0;color:#07130f;font-weight:bold}
-                            button.secondary{background:#28483a;color:#fff}
-                            #map{height:calc(100vh - 174px);width:100%}
-                            #status{font-size:11px;color:#b7c8bf;padding:6px 10px;background:#10221b}
-                            </style></head><body>
-                            <div id="panel">
-                            <div class="field"><label>مبدأ</label><input id="origin" placeholder="مبدأ حرکت را وارد کنید"></div>
-                            <div class="field"><label>مقصد</label><input id="dest" placeholder="مقصد را وارد کنید"></div>
-                            <button onclick="routeTo()">نمایش مسیر</button><button class="secondary" onclick="locateMe()">مبدأ: موقعیت من</button>
-                            </div>
-                            <div id="status">مبدأ و مقصد را روی همین نقشه وارد کنید.</div><div id="map"></div>
-                            <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-                            <script>
-                            const map=L.map('map').setView([35.7,51.4],5);
-                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
-                            let me=null, meMarker=null, destMarker=null, originMarker=null, routeLine=null;
-                            function status(t){document.getElementById('status').innerText=t}
-                            function locateMe(){
-                              if(!navigator.geolocation){status('موقعیت‌یابی در این دستگاه در دسترس نیست.');return}
-                              status('در حال دریافت موقعیت شما…');
-                              navigator.geolocation.getCurrentPosition(p=>{
-                                me=[p.coords.latitude,p.coords.longitude];
-                                document.getElementById('origin').value='موقعیت فعلی من';
-                                if(meMarker)map.removeLayer(meMarker);
-                                meMarker=L.marker(me).addTo(map).bindPopup('مبدأ: موقعیت فعلی شما').openPopup();
-                                map.setView(me,15);status('مبدأ روی موقعیت فعلی شما تنظیم شد.');
-                              },e=>status('دریافت موقعیت انجام نشد؛ مجوز مکان‌یابی و اینترنت را بررسی کنید.'),{enableHighAccuracy:true,timeout:15000});
-                            }
-                            async function searchPlace(q){
-                              const g=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent(q));
-                              const places=await g.json();
-                              if(!places.length)throw new Error('مکان پیدا نشد: '+q);
-                              return [Number(places[0].lat),Number(places[0].lon),places[0].display_name];
-                            }
-                            async function routeTo(){
-                              const originText=document.getElementById('origin').value.trim();
-                              const destText=document.getElementById('dest').value.trim();
-                              if(!destText){status('لطفاً مقصد را وارد کنید.');return}
-                              if(!originText && !me){status('مبدأ را وارد کنید یا دکمه «مبدأ: موقعیت من» را بزنید.');return}
-                              try{
-                                status('در حال یافتن مبدأ و مقصد…');
-                                let start=me;
-                                if(originText && originText!=='موقعیت فعلی من'){
-                                  const o=await searchPlace(originText);
-                                  start=[o[0],o[1]];
-                                  if(originMarker)map.removeLayer(originMarker);
-                                  originMarker=L.marker(start).addTo(map).bindPopup('مبدأ: '+o[2]);
-                                }
-                                const d=await searchPlace(destText);
-                                const end=[d[0],d[1]];
-                                if(destMarker)map.removeLayer(destMarker);
-                                destMarker=L.marker(end).addTo(map).bindPopup('مقصد: '+d[2]);
-                                status('در حال محاسبه مسیر…');
-                                const u='https://router.project-osrm.org/route/v1/driving/'+start[1]+','+start[0]+';'+end[1]+','+end[0]+'?overview=full&geometries=geojson';
-                                const rr=await fetch(u);const data=await rr.json();
-                                if(!data.routes||!data.routes.length){status('برای این مبدأ و مقصد مسیری پیدا نشد.');return}
-                                if(routeLine)map.removeLayer(routeLine);
-                                routeLine=L.geoJSON(data.routes[0].geometry,{style:{color:'#13b981',weight:6}}).addTo(map);
-                                map.fitBounds(routeLine.getBounds(),{padding:[25,25]});
-                                const km=(data.routes[0].distance/1000).toFixed(1), min=Math.round(data.routes[0].duration/60);
-                                status('مسیر آماده است • '+km+' کیلومتر • حدود '+min+' دقیقه');
-                              }catch(e){status(e.message==='Failed to fetch'?'اتصال به سرویس نقشه برقرار نشد؛ اینترنت را بررسی کنید.':e.message)}
-                            }
-                            </script></body></html>
-                            """.trimIndent(),
-                            "text/html",
-                            "UTF-8",
-                            null
-                        )
                     }
+                    loadDataWithBaseURL(
+                        "https://openstreetmap.org/",
+                        """
+                        <!DOCTYPE html><html lang="fa"><head><meta charset="utf-8">
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+                        <style>
+                        *{box-sizing:border-box}
+                        html,body{height:100%;width:100%;margin:0;overflow:hidden;font-family:Tahoma,Arial;background:#07130f;color:#fff}
+                        body{display:flex;flex-direction:column}
+                        #map{flex:1 1 auto;min-height:0;width:100%;order:1}
+                        #status{flex:0 0 auto;order:2;font-size:11px;color:#b7c8bf;padding:7px 12px;background:#10221b;border-top:1px solid #28483a}
+                        #panel{flex:0 0 auto;order:3;padding:12px 14px 16px;background:#10221b;display:flex;gap:9px;flex-wrap:wrap;box-shadow:0 -5px 18px rgba(0,0,0,.22)}
+                        input{width:100%;padding:13px;border:1px solid #416452;border-radius:12px;background:#173528;color:white;font-size:14px;outline:none}
+                        input::placeholder{color:#9baaa2}
+                        .field{width:100%;display:flex;align-items:center;gap:8px}
+                        .field label{min-width:42px;color:#f2c66d;font-size:12px;font-weight:bold}
+                        button{border:0;border-radius:12px;padding:13px 14px;background:#2de0a0;color:#07130f;font-weight:bold;font-size:13px}
+                        button.primary{flex:1}
+                        button.secondary{background:#28483a;color:#fff}
+                        </style></head><body>
+                        <div id="map"></div>
+                        <div id="status">نقشه آماده است؛ مبدأ و مقصد را در کادر پایین وارد کنید.</div>
+                        <div id="panel">
+                          <div class="field"><label>مبدأ</label><input id="origin" placeholder="مبدأ حرکت را وارد کنید"></div>
+                          <div class="field"><label>مقصد</label><input id="dest" placeholder="مقصد را وارد کنید"></div>
+                          <button class="secondary" onclick="locateMe()">مبدأ: موقعیت من</button>
+                          <button class="primary" onclick="routeTo()">نمایش مسیر</button>
+                        </div>
+                        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+                        <script>
+                        const map=L.map('map').setView([35.7,51.4],5);
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+                        setTimeout(()=>map.invalidateSize(),250);
+                        let me=null, meMarker=null, destMarker=null, originMarker=null, routeLine=null;
+                        function status(t){document.getElementById('status').innerText=t}
+                        function locateMe(){
+                          if(!navigator.geolocation){status('موقعیت‌یابی در این دستگاه در دسترس نیست.');return}
+                          status('در حال دریافت موقعیت شما…');
+                          navigator.geolocation.getCurrentPosition(p=>{
+                            me=[p.coords.latitude,p.coords.longitude];
+                            document.getElementById('origin').value='موقعیت فعلی من';
+                            if(meMarker)map.removeLayer(meMarker);
+                            meMarker=L.marker(me).addTo(map).bindPopup('مبدأ: موقعیت فعلی شما').openPopup();
+                            map.setView(me,15);status('مبدأ روی موقعیت فعلی شما تنظیم شد.');
+                          },e=>status('دریافت موقعیت انجام نشد؛ مجوز مکان‌یابی و اینترنت را بررسی کنید.'),{enableHighAccuracy:true,timeout:15000});
+                        }
+                        async function searchPlace(q){
+                          const g=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent(q));
+                          const places=await g.json();
+                          if(!places.length)throw new Error('مکان پیدا نشد: '+q);
+                          return [Number(places[0].lat),Number(places[0].lon),places[0].display_name];
+                        }
+                        async function routeTo(){
+                          const originText=document.getElementById('origin').value.trim();
+                          const destText=document.getElementById('dest').value.trim();
+                          if(!destText){status('لطفاً مقصد را وارد کنید.');return}
+                          if(!originText && !me){status('مبدأ را وارد کنید یا دکمه «مبدأ: موقعیت من» را بزنید.');return}
+                          try{
+                            status('در حال یافتن مبدأ و مقصد…');
+                            let start=me;
+                            if(originText && originText!=='موقعیت فعلی من'){
+                              const o=await searchPlace(originText);
+                              start=[o[0],o[1]];
+                              if(originMarker)map.removeLayer(originMarker);
+                              originMarker=L.marker(start).addTo(map).bindPopup('مبدأ: '+o[2]);
+                            }
+                            if(!start){status('ابتدا مبدأ را وارد کنید یا موقعیت فعلی را انتخاب کنید.');return}
+                            const d=await searchPlace(destText);
+                            const end=[d[0],d[1]];
+                            if(destMarker)map.removeLayer(destMarker);
+                            destMarker=L.marker(end).addTo(map).bindPopup('مقصد: '+d[2]);
+                            status('در حال محاسبه مسیر…');
+                            const u='https://router.project-osrm.org/route/v1/driving/'+start[1]+','+start[0]+';'+end[1]+','+end[0]+'?overview=full&geometries=geojson';
+                            const rr=await fetch(u);const data=await rr.json();
+                            if(!data.routes||!data.routes.length){status('برای این مبدأ و مقصد مسیری پیدا نشد.');return}
+                            if(routeLine)map.removeLayer(routeLine);
+                            routeLine=L.geoJSON(data.routes[0].geometry,{style:{color:'#13b981',weight:6}}).addTo(map);
+                            map.fitBounds(routeLine.getBounds(),{padding:[25,25]});
+                            const km=(data.routes[0].distance/1000).toFixed(1), min=Math.round(data.routes[0].duration/60);
+                            status('مسیر آماده است • '+km+' کیلومتر • حدود '+min+' دقیقه');
+                          }catch(e){status(e.message==='Failed to fetch'?'اتصال به سرویس نقشه برقرار نشد؛ اینترنت را بررسی کنید.':e.message)}
+                        }
+                        </script></body></html>
+                        """.trimIndent(),
+                        "text/html",
+                        "UTF-8",
+                        null
+                    )
                 }
-            )
-        }
-        Text(
-            if (hasLocationPermission) "مسیریابی با نقشه OpenStreetMap انجام می‌شود؛ اینترنت لازم است."
-            else "برای نمایش مسیر از موقعیت فعلی، اجازه دسترسی به مکان را فعال کنید.",
-            color = Muted, fontSize = 10.sp, modifier = Modifier.padding(8.dp)
+            }
         )
     }
 }
