@@ -1232,6 +1232,9 @@ fun NavigatorScreen(modifier: Modifier = Modifier) {
                         #map .leaflet-container{width:100%!important;height:100%!important}
                         #map .leaflet-tile-pane{z-index:200!important}
                         #map .leaflet-tile-container{pointer-events:none}
+                         #maptools{position:absolute;z-index:5000;top:12px;right:12px;display:flex;flex-direction:column;gap:6px}
+                         #maptools button{display:block;width:44px;height:44px;padding:0;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#17243a;font-size:28px;font-weight:bold;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+                         body{position:relative}
                         .leaflet-zoom-box{position:absolute;width:0;height:0;box-sizing:border-box;z-index:800}
                         .leaflet-control{position:relative;z-index:800;pointer-events:auto;float:left;clear:both}
                         .leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none}.leaflet-top{top:0}.leaflet-right{right:0}.leaflet-left{left:0}.leaflet-bottom{bottom:0}
@@ -1252,6 +1255,7 @@ fun NavigatorScreen(modifier: Modifier = Modifier) {
                         button.secondary{background:#e34b5b;color:#ffffff}
                         </style></head><body>
                         <div id="map"></div>
+                        <div id="maptools"><button type="button" onclick="if(map)map.zoomIn()">+</button><button type="button" onclick="if(map)map.zoomOut()">−</button></div>
                         <div id="status">نقشه آماده است؛ مبدأ و مقصد را در کادر پایین وارد کنید.</div>
                         <div id="panel">
                           <div class="field"><label>مبدأ</label><input id="origin" placeholder="مبدأ حرکت را وارد کنید"></div>
@@ -1330,13 +1334,7 @@ fun NavigatorScreen(modifier: Modifier = Modifier) {
                 }
             }
         )
-        Text(
-            text = navigatorStatus,
-            modifier = Modifier.align(Alignment.TopCenter).padding(8.dp)
-                .background(Color.White.copy(alpha = 0.94f), RoundedCornerShape(10.dp))
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            color = Color(0xFF17243A), fontSize = 11.sp
-        )
+
     }
 }
 
