@@ -1190,7 +1190,7 @@ fun NavigatorScreen(modifier: Modifier = Modifier) {
                             navigatorStatus = "صفحه نقشه بارگذاری شد؛ در حال آماده‌سازی نقشه…"
                             view?.postDelayed({
                                 view.evaluateJavascript(
-                                    "(function(){var el=document.getElementById('map');var st=document.getElementById('status');var p=el&&el.querySelector('.leaflet-pane');var imgs=el?el.querySelectorAll('img.leaflet-tile'):[];return 'Leaflet='+(!!window.L)+' | Map='+(!!window.map)+' | CSS='+(window.leafletCssLoaded===true?'OK':'FAIL/UNKNOWN')+' | MapHeight='+(el?el.clientHeight:0)+' | Pane='+(p?'yes':'no')+' | Tiles='+imgs.length+' | '+(st?st.innerText:'بدون پیام وضعیت')})()",
+                                    "(function(){var el=document.getElementById('map');var st=document.getElementById('status');var p=el&&el.querySelector('.leaflet-pane');var imgs=el?el.querySelectorAll('img.leaflet-tile'):[];var r=el?el.getBoundingClientRect():null;var im=imgs.length?imgs[0]:null;return 'Leaflet='+(!!window.L)+' | Map='+(!!window.map)+' | CSS='+(window.leafletCssLoaded===true?'OK':'FAIL/UNKNOWN')+' | MapSize='+(el?el.clientWidth+'x'+el.clientHeight:'none')+' | Pane='+(p?'yes':'no')+' | Tiles='+imgs.length+' | FirstTile='+(im?im.naturalWidth+'x'+im.naturalHeight:'none')+' | '+(st?st.innerText:'بدون پیام وضعیت')})()",
                                     { value ->
                                         val diagnostic = value?.removeSurrounding("\"")?.replace("\\n", " ") ?: "وضعیت نقشه قابل خواندن نیست"
                                         navigatorStatus = diagnostic
@@ -1227,7 +1227,11 @@ fun NavigatorScreen(modifier: Modifier = Modifier) {
                         .leaflet-container{position:relative;overflow:hidden;background:#ddd;outline:0}
                         .leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile-container,.leaflet-map-pane svg,.leaflet-map-pane canvas{position:absolute;left:0;top:0}
                         .leaflet-pane{z-index:400}.leaflet-tile-pane{z-index:200}.leaflet-overlay-pane{z-index:400}.leaflet-shadow-pane{z-index:500}.leaflet-marker-pane{z-index:600}.leaflet-tooltip-pane{z-index:650}.leaflet-popup-pane{z-index:700}
-                        .leaflet-tile{visibility:hidden;max-width:none!important;max-height:none!important}.leaflet-tile-loaded{visibility:inherit}
+                        .leaflet-tile{visibility:visible!important;max-width:none!important;max-height:none!important;opacity:1!important;display:block!important}.leaflet-tile-loaded{visibility:visible!important;opacity:1!important}
+                        #map{position:relative!important;overflow:hidden!important;background:#dce7ef!important;isolation:isolate}
+                        #map .leaflet-container{width:100%!important;height:100%!important}
+                        #map .leaflet-tile-pane{z-index:200!important}
+                        #map .leaflet-tile-container{pointer-events:none}
                         .leaflet-zoom-box{position:absolute;width:0;height:0;box-sizing:border-box;z-index:800}
                         .leaflet-control{position:relative;z-index:800;pointer-events:auto;float:left;clear:both}
                         .leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none}.leaflet-top{top:0}.leaflet-right{right:0}.leaflet-left{left:0}.leaflet-bottom{bottom:0}
@@ -1264,7 +1268,7 @@ fun NavigatorScreen(modifier: Modifier = Modifier) {
                           map=L.map('map',{zoomControl:true}).setView([35.7,51.4],5);
                           let loadedTiles=0,failedTiles=0;
                           const tiles=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'});
-                          tiles.on('tileload',()=>{loadedTiles++;status('نقشه در حال نمایش است؛ تصاویر دریافت‌شده: '+loadedTiles)});
+                          tiles.on('tileload',()=>{loadedTiles++;map.invalidateSize(true);status('تصاویر نقشه دریافت شد: '+loadedTiles)});
                           tiles.on('tileerror',()=>{failedTiles++;status('خطای دریافت تصاویر نقشه؛ موفق: '+loadedTiles+' | ناموفق: '+failedTiles)});
                           tiles.addTo(map);
                           map.whenReady(()=>status('نقشه آماده شد؛ در انتظار دریافت تصاویر خیابان‌ها…'));
