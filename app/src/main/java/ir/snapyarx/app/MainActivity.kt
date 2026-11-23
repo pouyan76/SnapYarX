@@ -5,6 +5,11 @@ import android.os.Bundle
 import android.net.Uri
 import android.content.Intent
 import android.widget.Toast
+import android.Manifest
+import android.content.pm.PackageManager
+import android.webkit.WebChromeClient
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -37,6 +42,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.DecimalFormat
@@ -85,8 +92,6 @@ fun SnapYarApp() {
     var showAdd by remember { mutableStateOf(false) }
     var pendingBackup by remember { mutableStateOf<Pair<String, List<Entry>>?>(null) }
     var showRestoreConfirm by remember { mutableStateOf(false) }
-    var showNavigator by remember { mutableStateOf(false) }
-    var destination by remember { mutableStateOf("") }
 
     val exportBackupLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -246,12 +251,13 @@ fun SnapYarApp() {
                         contentColor = Muted
                     ) {
                         val labels = listOf(
-                            "خانه", "سفرها", "گزارش", "ابزارها", "پروفایل"
+                            "خانه", "سفرها", "گزارش", "مسیریابی", "ابزارها", "پروفایل"
                         )
                         val icons = listOf(
                             Icons.Default.Home,
                             Icons.Default.Route,
                             Icons.Default.BarChart,
+                            Icons.Default.Navigation,
                             Icons.Default.Construction,
                             Icons.Default.Person
                         )
@@ -313,7 +319,9 @@ fun SnapYarApp() {
                         Modifier.padding(padding)
                     )
 
-                    3 -> ToolsScreen(role, Modifier.padding(padding), onOpenNavigator = { showNavigator = true })
+                    3 -> NavigatorScreen(Modifier.padding(padding))
+
+                    4 -> ToolsScreen(role, Modifier.padding(padding), onOpenNavigator = { tab = 3 })
 
                     else -> ProfileScreen(
                         role,
@@ -336,58 +344,6 @@ fun SnapYarApp() {
                     onSave = { a, c, n ->
                         addEntry(a, c, n)
                         showAdd = false
-                    }
-                )
-            }
-
-            if (showNavigator) {
-                AlertDialog(
-                    onDismissRequest = { showNavigator = false },
-                    containerColor = SurfaceDark,
-                    title = { Text("نقشه و مسیریاب اسپکس", color = White) },
-                    text = {
-                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Text("مقصد را وارد کنید؛ مسیر در Google Maps باز می‌شود.", color = Muted, fontSize = 12.sp)
-                            OutlinedTextField(
-                                value = destination,
-                                onValueChange = { destination = it },
-                                label = { Text("آدرس یا نام مقصد") },
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = fieldColors()
-                            )
-                        }
-                    },
-                    confirmButton = {
-                        TextButton(
-                            enabled = destination.isNotBlank(),
-                            onClick = {
-                                val target = destination.trim()
-                                try {
-                                    val navigationIntent = Intent(
-                                        Intent.ACTION_VIEW,
-                                        Uri.parse("google.navigation:q=" + Uri.encode(target))
-                                    ).apply { setPackage("com.google.android.apps.maps") }
-                                    context.startActivity(navigationIntent)
-                                } catch (_: Exception) {
-                                    try {
-                                        val mapIntent = Intent(
-                                            Intent.ACTION_VIEW,
-                                            Uri.parse("geo:0,0?q=" + Uri.encode(target))
-                                        )
-                                        context.startActivity(Intent.createChooser(mapIntent, "انتخاب نقشه"))
-                                    } catch (_: Exception) {
-                                        Toast.makeText(context, "برنامه نقشه‌ای روی گوشی پیدا نشد", Toast.LENGTH_LONG).show()
-                                    }
-                                }
-                                showNavigator = false
-                            }
-                        ) { Text("مسیریابی", color = Green) }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showNavigator = false }) {
-                            Text("انصراف", color = Muted)
-                        }
                     }
                 )
             }
@@ -1187,6 +1143,141 @@ fun parseEntryDate(value: String): Date? {
         ).parse(value)
     } catch (_: Exception) {
         null
+    }
+}
+
+
+@Composable
+fun NavigatorScreen(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    var hasLocationPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { result ->
+        hasLocationPermission = result[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+            result[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+    }
+
+    LaunchedEffect(Unit) {
+        if (!hasLocationPermission) {
+            permissionLauncher.launch(arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ))
+        }
+    }
+
+    Column(
+        modifier.fillMaxSize().background(Bg).padding(12.dp)
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("مسیریابی هوشمند", color = White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+                Text("نقشه زنده • مسیریابی داخل اسپکس‌یار", color = Muted, fontSize = 11.sp)
+            }
+            Icon(Icons.Default.Explore, null, tint = Gold, modifier = Modifier.size(28.dp))
+        }
+        Card(
+            Modifier.weight(1f).fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+            shape = RoundedCornerShape(20.dp)
+        ) {
+            AndroidView(
+                modifier = Modifier.fillMaxSize(),
+                factory = { ctx ->
+                    WebView(ctx).apply {
+                        settings.javaScriptEnabled = true
+                        settings.domStorageEnabled = true
+                        settings.setGeolocationEnabled(true)
+                        webViewClient = WebViewClient()
+                        webChromeClient = object : WebChromeClient() {
+                            override fun onGeolocationPermissionsShowPrompt(
+                                origin: String,
+                                callback: android.webkit.GeolocationPermissions.Callback
+                            ) {
+                                val granted = ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                                    ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                                callback.invoke(origin, granted, false)
+                            }
+                        }
+                        loadDataWithBaseURL(
+                            "https://openstreetmap.org/",
+                            """
+                            <!DOCTYPE html><html lang="fa"><head><meta charset="utf-8">
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                            <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+                            <style>
+                            *{box-sizing:border-box}body{margin:0;font-family:Tahoma,Arial;background:#07130f;color:#fff}
+                            #panel{padding:10px;background:#10221b;display:flex;gap:6px;flex-wrap:wrap}
+                            input{flex:1;min-width:130px;padding:12px;border:1px solid #416452;border-radius:10px;background:#173528;color:white;font-size:14px}
+                            button{border:0;border-radius:10px;padding:11px 13px;background:#2de0a0;color:#07130f;font-weight:bold}
+                            #map{height:calc(100vh - 112px);width:100%}
+                            #status{font-size:11px;color:#b7c8bf;padding:6px 10px;background:#10221b}
+                            </style></head><body>
+                            <div id="panel"><input id="dest" placeholder="نام مکان یا آدرس مقصد">
+                            <button onclick="routeTo()">یافتن مسیر</button><button onclick="locateMe()">موقعیت من</button></div>
+                            <div id="status">برای شروع، موقعیت خود را مشخص کنید یا مقصد را جست‌وجو کنید.</div><div id="map"></div>
+                            <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+                            <script>
+                            const map=L.map('map').setView([35.7,51.4],5);
+                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+                            let me=null, meMarker=null, destMarker=null, routeLine=null;
+                            function status(t){document.getElementById('status').innerText=t}
+                            function locateMe(){
+                              if(!navigator.geolocation){status('موقعیت‌یابی در این دستگاه در دسترس نیست.');return}
+                              status('در حال دریافت موقعیت شما…');
+                              navigator.geolocation.getCurrentPosition(p=>{
+                                me=[p.coords.latitude,p.coords.longitude];
+                                if(meMarker)map.removeLayer(meMarker);
+                                meMarker=L.marker(me).addTo(map).bindPopup('موقعیت شما').openPopup();
+                                map.setView(me,15);status('موقعیت شما مشخص شد؛ مقصد را جست‌وجو کنید.');
+                              },e=>status('دریافت موقعیت انجام نشد؛ مجوز مکان‌یابی و اینترنت را بررسی کنید.'),{enableHighAccuracy:true,timeout:15000});
+                            }
+                            async function routeTo(){
+                              const q=document.getElementById('dest').value.trim();
+                              if(!q){status('ابتدا مقصد را وارد کنید.');return}
+                              try{
+                                status('در حال جست‌وجوی مقصد…');
+                                const g=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent(q));
+                                const places=await g.json();if(!places.length){status('مقصد پیدا نشد؛ نام یا آدرس دیگری وارد کنید.');return}
+                                const d=[Number(places[0].lat),Number(places[0].lon)];
+                                if(destMarker)map.removeLayer(destMarker);
+                                destMarker=L.marker(d).addTo(map).bindPopup(places[0].display_name);
+                                if(!me){map.setView(d,14);status('مقصد روی نقشه مشخص شد. برای دریافت مسیر، ابتدا «موقعیت من» را بزنید.');return}
+                                status('در حال محاسبه مسیر…');
+                                const u='https://router.project-osrm.org/route/v1/driving/'+me[1]+','+me[0]+';'+d[1]+','+d[0]+'?overview=full&geometries=geojson';
+                                const rr=await fetch(u);const data=await rr.json();
+                                if(!data.routes||!data.routes.length){status('برای این مقصد مسیری پیدا نشد.');return}
+                                if(routeLine)map.removeLayer(routeLine);
+                                routeLine=L.geoJSON(data.routes[0].geometry,{style:{color:'#13b981',weight:6}}).addTo(map);
+                                map.fitBounds(routeLine.getBounds(),{padding:[25,25]});
+                                const km=(data.routes[0].distance/1000).toFixed(1), min=Math.round(data.routes[0].duration/60);
+                                status('مسیر آماده است • '+km+' کیلومتر • حدود '+min+' دقیقه');
+                              }catch(e){status('اتصال به سرویس نقشه برقرار نشد؛ اینترنت را بررسی کنید.')}
+                            }
+                            </script></body></html>
+                            """.trimIndent(),
+                            "text/html",
+                            "UTF-8",
+                            null
+                        )
+                    }
+                }
+            )
+        }
+        Text(
+            if (hasLocationPermission) "مسیریابی با نقشه OpenStreetMap انجام می‌شود؛ اینترنت لازم است."
+            else "برای نمایش مسیر از موقعیت فعلی، اجازه دسترسی به مکان را فعال کنید.",
+            color = Muted, fontSize = 10.sp, modifier = Modifier.padding(8.dp)
+        )
     }
 }
 
