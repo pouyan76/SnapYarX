@@ -1189,8 +1189,15 @@ fun NavigatorScreen(modifier: Modifier = Modifier) {
                             super.onPageFinished(view, url)
                             navigatorStatus = "صفحه نقشه بارگذاری شد؛ در حال آماده‌سازی نقشه…"
                             view?.postDelayed({
-                                view.evaluateJavascript("if(window.map){map.invalidateSize(true)}; if(!window.L){document.getElementById('status').innerText='کتابخانه نقشه بارگذاری نشده است.'}", null)
-                            }, 500)
+                                view.evaluateJavascript(
+                                    "(function(){var el=document.getElementById('map');var st=document.getElementById('status');return 'Leaflet='+(!!window.L)+' | Map='+(!!window.map)+' | MapHeight='+(el?el.clientHeight:0)+' | '+(st?st.innerText:'بدون پیام وضعیت')})()",
+                                    { value ->
+                                        val diagnostic = value?.removeSurrounding("\"")?.replace("\\n", " ") ?: "وضعیت نقشه قابل خواندن نیست"
+                                        navigatorStatus = diagnostic
+                                    }
+                                )
+                                view.evaluateJavascript("if(window.map){map.invalidateSize(true)}", null)
+                            }, 3000)
                         }
                         override fun onReceivedError(view: WebView?, request: android.webkit.WebResourceRequest?, error: android.webkit.WebResourceError?) {
                             super.onReceivedError(view, request, error)
@@ -1241,6 +1248,7 @@ fun NavigatorScreen(modifier: Modifier = Modifier) {
                         <script>
                         let map=null, me=null, meMarker=null, destMarker=null, originMarker=null, routeLine=null;
                         function status(t){const el=document.getElementById('status');if(el)el.innerText=t}
+                        window.onerror=function(message,source,line){status('خطای نقشه: '+message+' (خط '+line+')');return false};
                         function initMap(){
                           if(!window.L){status('کتابخانه نقشه در دسترس نیست.');return}
                           map=L.map('map',{zoomControl:true}).setView([35.7,51.4],5);
