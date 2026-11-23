@@ -1224,9 +1224,9 @@ fun NavigatorScreen(modifier: Modifier = Modifier) {
                         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css'">
                         <style>
                         *{box-sizing:border-box}
-                        html,body{height:100%;width:100%;margin:0;overflow:hidden;font-family:Tahoma,Arial;background:#f4f7fc;color:#17243a}
-                        body{display:flex;flex-direction:column}
-                        #map{flex:1 1 auto;min-height:0;width:100%;order:1}
+                        html,body{height:100%;min-height:100%;width:100%;margin:0;overflow:hidden;font-family:Tahoma,Arial;background:#f4f7fc;color:#17243a}
+                        body{height:100vh;min-height:100vh;display:flex;flex-direction:column}
+                        #map{display:block;flex:1 1 55vh;height:55vh;min-height:320px;width:100%;order:1}
                         #status{flex:0 0 auto;order:2;font-size:11px;color:#b7c8bf;padding:7px 12px;background:#ffffff;border-top:1px solid #28483a}
                         #panel{flex:0 0 auto;order:3;padding:12px 14px 16px;background:#10221b;display:flex;gap:9px;flex-wrap:wrap;box-shadow:0 -5px 18px rgba(0,0,0,.22)}
                         input{width:100%;padding:13px;border:1px solid #d5dfed;border-radius:12px;background:#f4f7fc;color:#17243a;font-size:14px;outline:none}
