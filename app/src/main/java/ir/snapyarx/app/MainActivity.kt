@@ -1201,67 +1201,169 @@ fun ToolsScreen(role: String, modifier: Modifier = Modifier, onOpenNavigator: ()
     Column(
         modifier
             .fillMaxSize()
-            .padding(18.dp)
+            .padding(horizontal = 18.dp, vertical = 14.dp)
     ) {
-        Spacer(Modifier.height(12.dp))
-
-        Text(
-            "ابزارهای کاربردی",
-            color = White,
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(Modifier.height(14.dp))
-
-        val tools = if (role == "driver") {
-            listOf(
-                "نقشه و مسیریاب" to Icons.Default.Map,
-                "ماشین‌حساب سود سفر" to Icons.Default.Calculate,
-                "محاسبه هزینه سوخت" to Icons.Default.LocalGasStation,
-                "یادآور سرویس خودرو" to Icons.Default.Build,
-                "چک‌لیست پیش از حرکت" to Icons.Default.Checklist
+        Column(
+            Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+        ) {
+            Text(
+                "ابزارهای کاربردی",
+                color = White,
+                fontSize = 23.sp,
+                fontWeight = FontWeight.Bold
             )
-        } else {
-            listOf(
-                "نقشه و مسیریاب" to Icons.Default.Map,
-                "ماشین‌حساب هزینه سفر" to Icons.Default.Calculate,
-                "چک‌لیست وسایل سفر" to Icons.Default.Checklist,
-                "یادداشت مقصدها" to Icons.Default.Map,
-                "راهنمای ایمنی سفر" to Icons.Default.Security
+
+            Spacer(Modifier.height(5.dp))
+
+            Text(
+                "امکانات هوشمند برای مدیریت بهتر سفر",
+                color = Muted,
+                fontSize = 12.sp
             )
+
+            Spacer(Modifier.height(18.dp))
+
+            val tools = if (role == "driver") {
+                listOf(
+                    "ماشین‌حساب سود سفر" to Icons.Default.Calculate,
+                    "محاسبه هزینه سوخت" to Icons.Default.LocalGasStation,
+                    "یادآور سرویس خودرو" to Icons.Default.Build,
+                    "چک‌لیست پیش از حرکت" to Icons.Default.Checklist
+                )
+            } else {
+                listOf(
+                    "ماشین‌حساب هزینه سفر" to Icons.Default.Calculate,
+                    "چک‌لیست وسایل سفر" to Icons.Default.Checklist,
+                    "یادداشت مقصدها" to Icons.Default.Map,
+                    "راهنمای ایمنی سفر" to Icons.Default.Security
+                )
+            }
+
+            tools.forEach { (title, icon) ->
+                Card(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 5.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = SurfaceDark
+                    ),
+                    shape = RoundedCornerShape(17.dp)
+                ) {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 17.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            Modifier
+                                .size(42.dp)
+                                .background(Green.copy(alpha = 0.12f), RoundedCornerShape(13.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(icon, null, tint = Green)
+                        }
+                        Spacer(Modifier.width(13.dp))
+                        Text(
+                            title,
+                            color = White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Spacer(Modifier.weight(1f))
+                        Icon(Icons.Default.ChevronLeft, null, tint = Muted)
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "ابزارهای بیشتر در نسخه‌های بعدی اضافه می‌شوند.",
+                color = Muted,
+                fontSize = 11.sp
+            )
+            Spacer(Modifier.height(8.dp))
         }
 
-        tools.forEach { (title, icon) ->
-            Card(
+        Card(
+            Modifier
+                .fillMaxWidth()
+                .padding(top = 12.dp),
+            colors = CardDefaults.cardColors(containerColor = Surface2),
+            shape = RoundedCornerShape(22.dp)
+        ) {
+            Column(
                 Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 5.dp)
-                    .clickable { if (title == "نقشه و مسیریاب") onOpenNavigator() },
-                colors = CardDefaults.cardColors(
-                    containerColor = SurfaceDark
-                ),
-                shape = RoundedCornerShape(15.dp)
+                    .padding(16.dp)
             ) {
                 Row(
-                    Modifier.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(icon, null, tint = Green)
+                    Box(
+                        Modifier
+                            .size(48.dp)
+                            .background(Green.copy(alpha = 0.15f), RoundedCornerShape(15.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Directions,
+                            contentDescription = null,
+                            tint = Green,
+                            modifier = Modifier.size(27.dp)
+                        )
+                    }
+
                     Spacer(Modifier.width(12.dp))
-                    Text(title, color = White)
-                    Spacer(Modifier.weight(1f))
-                    Icon(Icons.Default.ChevronLeft, null, tint = Muted)
+
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            "نقشه و مسیریاب",
+                            color = White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(Modifier.height(3.dp))
+                        Text(
+                            "مقصد را وارد کنید و مسیر را روی نقشه دنبال کنید",
+                            color = Muted,
+                            fontSize = 11.sp
+                        )
+                    }
+
+                    Icon(
+                        Icons.Default.LocationOn,
+                        contentDescription = null,
+                        tint = Green
+                    )
+                }
+
+                Spacer(Modifier.height(14.dp))
+
+                Button(
+                    onClick = onOpenNavigator,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
+                    shape = RoundedCornerShape(15.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Green,
+                        contentColor = Bg
+                    )
+                ) {
+                    Icon(Icons.Default.Navigation, contentDescription = null)
+                    Spacer(Modifier.width(9.dp))
+                    Text(
+                        "باز کردن نقشه و مسیریابی",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
                 }
             }
         }
-
-        Spacer(Modifier.height(12.dp))
-        Text(
-            "ابزارهای بیشتر در نسخه‌های بعدی اضافه می‌شوند.",
-            color = Muted,
-            fontSize = 11.sp
-        )
     }
 }
 
