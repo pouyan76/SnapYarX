@@ -1182,6 +1182,8 @@ fun NavigatorScreen(modifier: Modifier = Modifier) {
             factory = { ctx ->
                 WebView(ctx).apply {
                     setBackgroundColor(android.graphics.Color.WHITE)
+                    // رندر نرم‌افزاری برای جلوگیری از سفید ماندن لایه‌های تصویر در بعضی WebViewها
+                    setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null)
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
                     settings.loadsImagesAutomatically = true
@@ -1192,7 +1194,7 @@ fun NavigatorScreen(modifier: Modifier = Modifier) {
                             navigatorStatus = "صفحه نقشه بارگذاری شد؛ در حال آماده‌سازی نقشه…"
                             view?.postDelayed({
                                 view.evaluateJavascript(
-                                    "(function(){var el=document.getElementById('map');var st=document.getElementById('status');var p=el&&el.querySelector('.leaflet-pane');var imgs=el?el.querySelectorAll('img.leaflet-tile'):[];var r=el?el.getBoundingClientRect():null;var im=imgs.length?imgs[0]:null;var ir=im?im.getBoundingClientRect():null;var cs=im?getComputedStyle(im):null;var ps=p?getComputedStyle(p):null;return 'Map='+ (el?el.clientWidth+'x'+el.clientHeight:'none')+' | TileNatural='+(im?im.naturalWidth+'x'+im.naturalHeight:'none')+' | TileRect='+(ir?Math.round(ir.left)+','+Math.round(ir.top)+','+Math.round(ir.width)+','+Math.round(ir.height):'none')+' | TileCSS='+(cs?cs.display+'/'+cs.visibility+'/'+cs.opacity:'none')+' | PaneZ='+(ps?ps.zIndex:'none')+' | '+(st?st.innerText:'بدون پیام وضعیت')})()",
+                                    "(function(){var el=document.getElementById('map');var st=document.getElementById('status');var p=el&&el.querySelector('.leaflet-pane');var tp=el&&el.querySelector('.leaflet-tile-pane');var imgs=el?el.querySelectorAll('img.leaflet-tile'):[];var im=imgs.length?imgs[0]:null;var ir=im?im.getBoundingClientRect():null;var cs=im?getComputedStyle(im):null;var ps=p?getComputedStyle(p):null;var ts=tp?getComputedStyle(tp):null;var hit=document.elementFromPoint(100,100);return 'Map='+(el?el.clientWidth+'x'+el.clientHeight:'none')+' | Tiles='+imgs.length+' | Natural='+(im?im.naturalWidth+'x'+im.naturalHeight:'none')+' | TileCSS='+(cs?cs.display+'/'+cs.visibility+'/'+cs.opacity+'/'+cs.zIndex:'none')+' | TilePaneZ='+(ts?ts.zIndex:'none')+' | MapPaneZ='+(ps?ps.zIndex:'none')+' | Hit='+(hit?hit.tagName+'.'+hit.className:'none')+' | '+(st?st.innerText:'بدون پیام وضعیت')})()",
                                     { value ->
                                         val diagnostic = value?.removeSurrounding("\"")?.replace("\\n", " ") ?: "وضعیت نقشه قابل خواندن نیست"
                                         navigatorStatus = diagnostic
@@ -1207,8 +1209,18 @@ fun NavigatorScreen(modifier: Modifier = Modifier) {
                                 navigatorStatus = "بارگذاری صفحه نقشه ناموفق بود؛ اتصال اینترنت یا WebView گوشی را بررسی کنید."
                             }
                         }
+                        override fun onRenderProcessGone(view: WebView?, detail: android.webkit.RenderProcessGoneDetail?): Boolean {
+                            navigatorStatus = "موتور نمایش نقشه متوقف شد؛ دکمه تلاش مجدد را بزنید."
+                            return true
+                        }
                     }
                     webChromeClient = object : WebChromeClient() {
+                        override fun onConsoleMessage(message: android.webkit.ConsoleMessage): Boolean {
+                            if (message.messageLevel() == android.webkit.ConsoleMessage.MessageLevel.ERROR) {
+                                navigatorStatus = "خطای نمایش نقشه: " + message.message().take(110)
+                            }
+                            return true
+                        }
                         override fun onGeolocationPermissionsShowPrompt(
                             origin: String,
                             callback: android.webkit.GeolocationPermissions.Callback
