@@ -1153,7 +1153,6 @@ fun parseEntryDate(value: String): Date? {
 
 
 @Composable
-@Composable
 fun NavigatorScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
