@@ -1240,10 +1240,6 @@ fun NavigatorScreen(modifier: Modifier = Modifier) {
                          #maptools{position:absolute;z-index:5000;top:12px;right:12px;display:flex;flex-direction:column;gap:6px}
                          #maptools button{display:block;width:44px;height:44px;padding:0;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#17243a;font-size:28px;font-weight:bold;box-shadow:0 2px 8px rgba(0,0,0,.2)}
                          body{position:relative}
-                        .leaflet-zoom-box{position:absolute;width:0;height:0;box-sizing:border-box;z-index:800}
-                        .leaflet-control{position:relative;z-index:800;pointer-events:auto;float:left;clear:both}
-                        .leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none}.leaflet-top{top:0}.leaflet-right{right:0}.leaflet-left{left:0}.leaflet-bottom{bottom:0}
-                        .leaflet-control-zoom a{display:block;width:30px;height:30px;line-height:30px;text-align:center;background:#fff;color:#222;text-decoration:none;font-size:20px}
                         .leaflet-control-attribution{background:rgba(255,255,255,.8);padding:2px 5px;font-size:10px}
                         *{box-sizing:border-box}
                         html,body{height:100%;min-height:100%;width:100%;margin:0;overflow:hidden;font-family:Tahoma,Arial;background:#f4f7fc;color:#17243a}
@@ -1341,36 +1337,6 @@ fun NavigatorScreen(modifier: Modifier = Modifier) {
         )
         }
 
-        Card(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(10.dp)
-                .widthIn(max = 310.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 5.dp),
-            shape = RoundedCornerShape(14.dp)
-        ) {
-            Row(
-                modifier = Modifier.padding(start = 12.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = navigatorStatus,
-                    modifier = Modifier.weight(1f),
-                    color = Color(0xFF17243A),
-                    fontSize = 10.sp,
-                    maxLines = 8
-                )
-                IconButton(
-                    onClick = {
-                        navigatorStatus = "در حال بارگذاری دوباره نقشه…"
-                        reloadKey++
-                    }
-                ) {
-                    Icon(Icons.Default.Refresh, contentDescription = "تلاش مجدد", tint = Green)
-                }
-            }
-        }
     }
 }
 
