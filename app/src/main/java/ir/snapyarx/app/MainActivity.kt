@@ -1338,6 +1338,32 @@ fun NavigatorScreen(modifier: Modifier = Modifier) {
         )
         }
 
+        Card(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(12.dp)
+                .fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+        ) {
+            Column(Modifier.padding(12.dp)) {
+                Text("گزارش وضعیت نقشه", color = Color(0xFF17243A), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Spacer(Modifier.height(6.dp))
+                Text(navigatorStatus, color = Color(0xFF17243A), fontSize = 11.sp)
+                Spacer(Modifier.height(8.dp))
+                Button(
+                    onClick = {
+                        navigatorStatus = "در حال بارگذاری دوباره نقشه…"
+                        reloadKey++
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1769E0))
+                ) {
+                    Icon(Icons.Default.Refresh, contentDescription = null)
+                    Spacer(Modifier.width(6.dp))
+                    Text("بارگذاری دوباره")
+                }
+            }
+        }
     }
 }
 
