@@ -1192,7 +1192,7 @@ fun NavigatorScreen(modifier: Modifier = Modifier) {
                             navigatorStatus = "صفحه نقشه بارگذاری شد؛ در حال آماده‌سازی نقشه…"
                             view?.postDelayed({
                                 view.evaluateJavascript(
-                                    "(function(){var el=document.getElementById('map'),st=document.getElementById('status'),imgs=el?el.querySelectorAll('img.leaflet-tile'):[],im=imgs.length?imgs[0]:null,ir=im?im.getBoundingClientRect():null,cs=im?getComputedStyle(im):null,mp=el&&el.querySelector('.leaflet-map-pane'),tp=el&&el.querySelector('.leaflet-tile-pane'),hit=ir?document.elementFromPoint(ir.left+Math.min(20,ir.width/2),ir.top+Math.min(20,ir.height/2)):null,mr=el?el.getBoundingClientRect():null;return 'MapRect='+(mr?Math.round(mr.left)+','+Math.round(mr.top)+','+Math.round(mr.width)+','+Math.round(mr.height):'none')+' | TileRect='+(ir?Math.round(ir.left)+','+Math.round(ir.top)+','+Math.round(ir.width)+','+Math.round(ir.height):'none')+' | Tiles='+imgs.length+' | Complete='+(im?im.complete:'no')+' | Natural='+(im?im.naturalWidth+'x'+im.naturalHeight:'none')+' | CSS='+(cs?cs.display+'/'+cs.visibility+'/'+cs.opacity+'/'+cs.position:'none')+' | Pane='+(mp?getComputedStyle(mp).transform+'/'+getComputedStyle(mp).zIndex:'none')+' | TilePane='+(tp?getComputedStyle(tp).transform+'/'+getComputedStyle(tp).zIndex:'none')+' | HitTileCenter='+(hit?hit.tagName+'.'+hit.className:'none')+' | DPR='+window.devicePixelRatio+' | '+(st?st.innerText:'بدون وضعیت')})()",
+                                    "(function(){var e=document.getElementById('map'),s=document.getElementById('status'),a=e?e.querySelectorAll('img.leaflet-tile'):[],i=a.length?a[0]:null,r=i?i.getBoundingClientRect():null,c=i?getComputedStyle(i):null,p=e&&e.querySelector('.leaflet-map-pane'),t=e&&e.querySelector('.leaflet-tile-pane'),h=r?document.elementFromPoint(r.left+r.width/2,r.top+r.height/2):null,chain=[],n=i;for(var k=0;n&&k<5;k++,n=n.parentElement){var q=getComputedStyle(n);chain.push(n.className+':'+q.display+'/'+q.visibility+'/'+q.opacity+'/'+q.zIndex)}return 'Tiles='+a.length+' Rect='+(r?Math.round(r.left)+','+Math.round(r.top)+','+Math.round(r.width)+','+Math.round(r.height):'none')+' Complete='+(i?i.complete:false)+' Natural='+(i?i.naturalWidth+'x'+i.naturalHeight:'none')+' ImgCSS='+(c?c.display+'/'+c.visibility+'/'+c.opacity:'none')+' HitCenter='+(h?h.tagName+'.'+h.className:'none')+' Pane='+ (p?getComputedStyle(p).transform:'none')+' TilePane='+ (t?getComputedStyle(t).zIndex:'none')+' Chain='+chain.join(' > ')+' Status='+(s?s.innerText:'none')})()",
                                     { value ->
                                         val diagnostic = value?.removeSurrounding("\"")?.replace("\\n", " ") ?: "وضعیت نقشه قابل خواندن نیست"
                                         navigatorStatus = diagnostic
@@ -1359,7 +1359,7 @@ fun NavigatorScreen(modifier: Modifier = Modifier) {
                     modifier = Modifier.weight(1f),
                     color = Color(0xFF17243A),
                     fontSize = 10.sp,
-                    maxLines = 3
+                    maxLines = 8
                 )
                 IconButton(
                     onClick = {
