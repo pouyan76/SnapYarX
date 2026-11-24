@@ -29,6 +29,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -1149,221 +1153,178 @@ fun parseEntryDate(value: String): Date? {
 
 
 @Composable
+@Composable
 fun NavigatorScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    var navigatorStatus by remember { mutableStateOf("در حال بارگذاری نقشه…") }
-    var reloadKey by remember { mutableIntStateOf(0) }
-    var hasLocationPermission by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
-                ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        )
-    }
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { result ->
-        hasLocationPermission = result[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
-            result[Manifest.permission.ACCESS_COARSE_LOCATION] == true
-    }
-
-    LaunchedEffect(Unit) {
-        if (!hasLocationPermission) {
-            permissionLauncher.launch(arrayOf(
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ))
-        }
-    }
+    val scope = rememberCoroutineScope()
+    var mapView by remember { mutableStateOf<org.osmdroid.views.MapView?>(null) }
+    var origin by remember { mutableStateOf("تهران") }
+    var destination by remember { mutableStateOf("") }
+    var routeStatus by remember { mutableStateOf("نقشه در حال آماده‌سازی است…") }
 
     Box(modifier.fillMaxSize().background(Bg)) {
-        key(reloadKey) {
         AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
-                WebView(ctx).apply {
-                    setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null)
-                    setBackgroundColor(android.graphics.Color.WHITE)
-                    settings.javaScriptEnabled = true
-                    settings.domStorageEnabled = true
-                    settings.loadsImagesAutomatically = true
-                    settings.setGeolocationEnabled(true)
-                    webViewClient = object : WebViewClient() {
-                        override fun onPageFinished(view: WebView?, url: String?) {
-                            super.onPageFinished(view, url)
-                            navigatorStatus = "صفحه نقشه بارگذاری شد؛ در حال آماده‌سازی نقشه…"
-                            view?.postDelayed({
-                                view.evaluateJavascript(
-                                    "(function(){var e=document.getElementById('map'),s=document.getElementById('status'),a=e?e.querySelectorAll('img.leaflet-tile'):[],i=a.length?a[0]:null,r=i?i.getBoundingClientRect():null,c=i?getComputedStyle(i):null,p=e&&e.querySelector('.leaflet-map-pane'),t=e&&e.querySelector('.leaflet-tile-pane'),h=r?document.elementFromPoint(r.left+r.width/2,r.top+r.height/2):null,chain=[],n=i;for(var k=0;n&&k<5;k++,n=n.parentElement){var q=getComputedStyle(n);chain.push(n.className+':'+q.display+'/'+q.visibility+'/'+q.opacity+'/'+q.zIndex)}return 'Tiles='+a.length+' Rect='+(r?Math.round(r.left)+','+Math.round(r.top)+','+Math.round(r.width)+','+Math.round(r.height):'none')+' Complete='+(i?i.complete:false)+' Natural='+(i?i.naturalWidth+'x'+i.naturalHeight:'none')+' ImgCSS='+(c?c.display+'/'+c.visibility+'/'+c.opacity:'none')+' HitCenter='+(h?h.tagName+'.'+h.className:'none')+' Pane='+ (p?getComputedStyle(p).transform:'none')+' TilePane='+ (t?getComputedStyle(t).zIndex:'none')+' Chain='+chain.join(' > ')+' Status='+(s?s.innerText:'none')})()",
-                                    { value ->
-                                        val diagnostic = value?.removeSurrounding("\"")?.replace("\\n", " ") ?: "وضعیت نقشه قابل خواندن نیست"
-                                        navigatorStatus = diagnostic
-                                    }
-                                )
-                                view.evaluateJavascript("if(window.map){map.invalidateSize(true)}", null)
-                            }, 3000)
-                        }
-                        override fun onReceivedError(view: WebView?, request: android.webkit.WebResourceRequest?, error: android.webkit.WebResourceError?) {
-                            super.onReceivedError(view, request, error)
-                            if (request?.isForMainFrame == true) {
-                                navigatorStatus = "بارگذاری صفحه نقشه ناموفق بود؛ اتصال اینترنت یا WebView گوشی را بررسی کنید."
-                            }
-                        }
-                        override fun onRenderProcessGone(view: WebView?, detail: android.webkit.RenderProcessGoneDetail?): Boolean {
-                            navigatorStatus = "موتور نمایش نقشه متوقف شد؛ دکمه تلاش مجدد را بزنید."
-                            return true
-                        }
-                    }
-                    webChromeClient = object : WebChromeClient() {
-                        override fun onConsoleMessage(message: android.webkit.ConsoleMessage): Boolean {
-                            if (message.messageLevel() == android.webkit.ConsoleMessage.MessageLevel.ERROR) {
-                                navigatorStatus = "خطای نمایش نقشه: " + message.message().take(110)
-                            }
-                            return true
-                        }
-                        override fun onGeolocationPermissionsShowPrompt(
-                            origin: String,
-                            callback: android.webkit.GeolocationPermissions.Callback
-                        ) {
-                            val granted = ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
-                                ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                            callback.invoke(origin, granted, false)
-                        }
-                    }
-                    loadDataWithBaseURL(
-                        "https://openstreetmap.org/",
-                        """
-                        <!DOCTYPE html><html lang="fa"><head><meta charset="utf-8">
-                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                        <link id="leaflet-css" rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" onload="window.leafletCssLoaded=true" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';this.onerror=function(){window.leafletCssLoaded=false}">
-                        <style>
-                        /* چیدمان لایه‌های داخلی Leaflet فقط توسط CSS رسمی خود کتابخانه مدیریت می‌شود */
-                        #map{position:relative!important;overflow:hidden!important;background:#dce7ef!important;width:100%;height:55vh;min-height:320px}
-                         #maptools{position:absolute;z-index:5000;top:12px;right:12px;display:flex;flex-direction:column;gap:6px}
-                         #maptools button{display:block;width:44px;height:44px;padding:0;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#17243a;font-size:28px;font-weight:bold;box-shadow:0 2px 8px rgba(0,0,0,.2)}
-                         body{position:relative}
-                        .leaflet-control-attribution{background:rgba(255,255,255,.8);padding:2px 5px;font-size:10px}
-                        *{box-sizing:border-box}
-                        html,body{height:100%;min-height:100%;width:100%;margin:0;overflow:hidden;font-family:Tahoma,Arial;background:#f4f7fc;color:#17243a}
-                        body{height:100vh;min-height:100vh;display:flex;flex-direction:column}
-                        #map{display:block;flex:1 1 55vh;height:55vh;min-height:320px;width:100%;order:1}
-                        #status{flex:0 0 auto;order:2;font-size:11px;color:#b7c8bf;padding:7px 12px;background:#ffffff;border-top:1px solid #28483a}
-                        #panel{flex:0 0 auto;order:3;padding:12px 14px 16px;background:#10221b;display:flex;gap:9px;flex-wrap:wrap;box-shadow:0 -5px 18px rgba(0,0,0,.22)}
-                        input{width:100%;padding:13px;border:1px solid #d5dfed;border-radius:12px;background:#f4f7fc;color:#17243a;font-size:14px;outline:none}
-                        input::placeholder{color:#68778d}
-                        .field{width:100%;display:flex;align-items:center;gap:8px}
-                        .field label{min-width:42px;color:#f2c66d;font-size:12px;font-weight:bold}
-                        button{border:0;border-radius:12px;padding:13px 14px;background:#1769e0;color:#ffffff;font-weight:bold;font-size:13px}
-                        button.primary{flex:1}
-                        button.secondary{background:#e34b5b;color:#ffffff}
-                        </style></head><body>
-                        <div id="map"></div>
-                        <div id="maptools"><button type="button" onclick="if(map)map.zoomIn()">+</button><button type="button" onclick="if(map)map.zoomOut()">−</button></div>
-                        <div id="status">نقشه آماده است؛ مبدأ و مقصد را در کادر پایین وارد کنید.</div>
-                        <div id="panel">
-                          <div class="field"><label>مبدأ</label><input id="origin" placeholder="مبدأ حرکت را وارد کنید"></div>
-                          <div class="field"><label>مقصد</label><input id="dest" placeholder="مقصد را وارد کنید"></div>
-                          <button class="secondary" onclick="locateMe()">مبدأ: موقعیت من</button>
-                          <button class="primary" onclick="routeTo()">نمایش مسیر</button>
-                        </div>
-                        <script>
-                        let map=null, me=null, meMarker=null, destMarker=null, originMarker=null, routeLine=null;
-                        function status(t){const el=document.getElementById('status');if(el)el.innerText=t}
-                        window.onerror=function(message,source,line){status('خطای نقشه: '+message+' (خط '+line+')');return false};
-                        function initMap(){
-                          if(!window.L){status('کتابخانه نقشه در دسترس نیست.');return}
-                          map=L.map('map',{zoomControl:true}).setView([35.7,51.4],5);
-                          let loadedTiles=0,failedTiles=0;
-                          const tiles=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'});
-                          tiles.on('tileload',()=>{loadedTiles++;map.invalidateSize(true);status('تصاویر نقشه دریافت شد: '+loadedTiles)});
-                          tiles.on('tileerror',()=>{failedTiles++;status('خطای دریافت تصاویر نقشه؛ موفق: '+loadedTiles+' | ناموفق: '+failedTiles)});
-                          tiles.addTo(map);
-                          map.whenReady(()=>status('نقشه آماده شد؛ در انتظار دریافت تصاویر خیابان‌ها…'));
-                          setTimeout(()=>{map.invalidateSize(true);status('CSS نقشه: '+(window.leafletCssLoaded===true?'بارگذاری شد':'نامشخص/ناموفق')+' | ارتفاع: '+document.getElementById('map').clientHeight+' | کاشی‌ها: '+loadedTiles)},900);
-                          setTimeout(()=>map&&map.invalidateSize(true),1800);
-                        }
-                        function loadLeaflet(url,fallback){
-                          const script=document.createElement('script');script.src=url;
-                          script.onload=()=>{try{initMap()}catch(e){status('خطا در راه‌اندازی نقشه: '+e.message)}};
-                          script.onerror=()=>{if(fallback)loadLeaflet(fallback,null);else status('کتابخانه نقشه بارگذاری نشد. دسترسی اینترنت به سرویس نقشه را بررسی کنید.')};
-                          document.head.appendChild(script);
-                        }
-                        loadLeaflet('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js','https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js');
-                        function locateMe(){
-                          if(!navigator.geolocation){status('موقعیت‌یابی در این دستگاه در دسترس نیست.');return}
-                          status('در حال دریافت موقعیت شما…');
-                          navigator.geolocation.getCurrentPosition(p=>{
-                            me=[p.coords.latitude,p.coords.longitude];document.getElementById('origin').value='موقعیت فعلی من';
-                            if(meMarker)map.removeLayer(meMarker);
-                            meMarker=L.marker(me).addTo(map).bindPopup('مبدأ: موقعیت فعلی شما').openPopup();
-                            map.setView(me,15);status('مبدأ روی موقعیت فعلی شما تنظیم شد.');
-                          },e=>status('دریافت موقعیت انجام نشد؛ مجوز مکان‌یابی را بررسی کنید.'),{enableHighAccuracy:true,timeout:15000});
-                        }
-                        async function searchPlace(q){
-                          const g=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent(q));
-                          if(!g.ok)throw new Error('سرویس جست‌وجوی مکان پاسخ نداد.');
-                          const places=await g.json();if(!places.length)throw new Error('مکان پیدا نشد: '+q);
-                          return [Number(places[0].lat),Number(places[0].lon),places[0].display_name];
-                        }
-                        async function routeTo(){
-                          const originText=document.getElementById('origin').value.trim(),destText=document.getElementById('dest').value.trim();
-                          if(!destText){status('لطفاً مقصد را وارد کنید.');return}
-                          if(!originText&&!me){status('مبدأ را وارد کنید یا موقعیت فعلی را انتخاب کنید.');return}
-                          try{
-                            status('در حال یافتن مبدأ و مقصد…');let start=me;
-                            if(originText&&originText!=='موقعیت فعلی من'){
-                              const o=await searchPlace(originText);start=[o[0],o[1]];
-                              if(originMarker)map.removeLayer(originMarker);originMarker=L.marker(start).addTo(map).bindPopup('مبدأ: '+o[2]);
-                            }
-                            if(!start){status('ابتدا مبدأ را وارد کنید یا موقعیت فعلی را انتخاب کنید.');return}
-                            const d=await searchPlace(destText),end=[d[0],d[1]];
-                            if(destMarker)map.removeLayer(destMarker);destMarker=L.marker(end).addTo(map).bindPopup('مقصد: '+d[2]);
-                            status('در حال محاسبه مسیر…');
-                            const u='https://router.project-osrm.org/route/v1/driving/'+start[1]+','+start[0]+';'+end[1]+','+end[0]+'?overview=full&geometries=geojson';
-                            const rr=await fetch(u);if(!rr.ok)throw new Error('سرویس مسیریابی پاسخ نداد.');
-                            const data=await rr.json();if(!data.routes||!data.routes.length){status('برای این مبدأ و مقصد مسیری پیدا نشد.');return}
-                            if(routeLine)map.removeLayer(routeLine);
-                            routeLine=L.geoJSON(data.routes[0].geometry,{style:{color:'#1769e0',weight:6}}).addTo(map);
-                            map.fitBounds(routeLine.getBounds(),{padding:[25,25]});
-                            status('مسیر آماده است • '+(data.routes[0].distance/1000).toFixed(1)+' کیلومتر • حدود '+Math.round(data.routes[0].duration/60)+' دقیقه');
-                          }catch(e){status(e.message==='Failed to fetch'?'اتصال به سرویس جست‌وجو یا مسیریابی برقرار نشد.':e.message)}
-                        }
-                        </script></body></html>
-                        """.trimIndent(),
-                        "text/html",
-                        "UTF-8",
-                        null
-                    )
+                org.osmdroid.config.Configuration.getInstance().userAgentValue = ctx.packageName
+                org.osmdroid.views.MapView(ctx).apply {
+                    setTileSource(org.osmdroid.tileprovider.tilesource.TileSourceFactory.MAPNIK)
+                    setMultiTouchControls(true)
+                    setBuiltInZoomControls(true)
+                    controller.setZoom(5.5)
+                    controller.setCenter(org.osmdroid.util.GeoPoint(35.7, 51.4))
+                    setUseDataConnection(true)
+                    mapView = this
                 }
-            }
+            },
+            update = { view -> mapView = view }
         )
-        }
 
         Card(
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .padding(12.dp)
-                .fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+                .fillMaxWidth()
+                .padding(12.dp),
+            colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+            elevation = CardDefaults.cardElevation(defaultElevation = 5.dp)
         ) {
-            Column(Modifier.padding(12.dp)) {
-                Text("گزارش وضعیت نقشه", color = Color(0xFF17243A), fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                Spacer(Modifier.height(6.dp))
-                Text(navigatorStatus, color = Color(0xFF17243A), fontSize = 11.sp)
-                Spacer(Modifier.height(8.dp))
+            Column(
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text("مسیریابی اسپکس‌یار", color = White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                OutlinedTextField(
+                    value = origin,
+                    onValueChange = { origin = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    label = { Text("مبدأ") },
+                    placeholder = { Text("نام شهر یا نشانی مبدأ") }
+                )
+                OutlinedTextField(
+                    value = destination,
+                    onValueChange = { destination = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    label = { Text("مقصد") },
+                    placeholder = { Text("نام شهر یا نشانی مقصد") }
+                )
                 Button(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = destination.isNotBlank(),
                     onClick = {
-                        navigatorStatus = "در حال بارگذاری دوباره نقشه…"
-                        reloadKey++
+                        val mv = mapView
+                        if (mv == null) {
+                            routeStatus = "نقشه هنوز آماده نشده است."
+                        } else {
+                            scope.launch {
+                                routeStatus = "در حال جست‌وجوی مبدأ و مقصد…"
+                                try {
+                                    val start = geocodeSpexPlace(origin)
+                                    val end = geocodeSpexPlace(destination)
+                                    routeStatus = "در حال محاسبه مسیر…"
+                                    val points = fetchSpexRoute(start, end)
+                                    mv.overlays.removeAll { it is org.osmdroid.views.overlay.Polyline || it is org.osmdroid.views.overlay.Marker }
+                                    val line = org.osmdroid.views.overlay.Polyline(mv).apply {
+                                        setPoints(points)
+                                        outlinePaint.color = android.graphics.Color.rgb(23, 105, 224)
+                                        outlinePaint.strokeWidth = 10f
+                                    }
+                                    mv.overlays.add(line)
+                                    val startMarker = org.osmdroid.views.overlay.Marker(mv).apply {
+                                        position = start
+                                        title = "مبدأ"
+                                    }
+                                    val endMarker = org.osmdroid.views.overlay.Marker(mv).apply {
+                                        position = end
+                                        title = "مقصد"
+                                    }
+                                    mv.overlays.add(startMarker)
+                                    mv.overlays.add(endMarker)
+                                    mv.controller.setCenter(start)
+                                    mv.zoomToBoundingBox(line.bounds, true, 72)
+                                    mv.invalidate()
+                                    routeStatus = "مسیر با موفقیت روی نقشه نمایش داده شد."
+                                } catch (e: Exception) {
+                                    routeStatus = "خطا در یافتن مسیر: ${e.message ?: "اتصال اینترنت را بررسی کنید"}"
+                                }
+                            }
+                        }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1769E0))
+                    colors = ButtonDefaults.buttonColors(containerColor = Green)
                 ) {
-                    Icon(Icons.Default.Refresh, contentDescription = null)
-                    Spacer(Modifier.width(6.dp))
-                    Text("بارگذاری دوباره")
+                    Icon(Icons.Default.Navigation, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("نمایش مسیر")
                 }
+                Text(routeStatus, color = Muted, fontSize = 11.sp)
             }
         }
+
+        Row(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            FilledIconButton(
+                onClick = { mapView?.controller?.zoomIn() },
+                colors = IconButtonDefaults.filledIconButtonColors(containerColor = SurfaceDark, contentColor = Green)
+            ) { Icon(Icons.Default.Add, contentDescription = "بزرگ‌نمایی") }
+            FilledIconButton(
+                onClick = { mapView?.controller?.zoomOut() },
+                colors = IconButtonDefaults.filledIconButtonColors(containerColor = SurfaceDark, contentColor = Green)
+            ) { Icon(Icons.Default.Remove, contentDescription = "کوچک‌نمایی") }
+        }
+    }
+
+    DisposableEffect(mapView) {
+        mapView?.onResume()
+        onDispose {
+            mapView?.onPause()
+            mapView?.onDetach()
+        }
+    }
+}
+
+private suspend fun geocodeSpexPlace(query: String): org.osmdroid.util.GeoPoint =
+    withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val encoded = java.net.URLEncoder.encode(query, "UTF-8")
+        val connection = java.net.URL("https://nominatim.openstreetmap.org/search?format=json&limit=1&q=$encoded")
+            .openConnection() as java.net.HttpURLConnection
+        try {
+            connection.connectTimeout = 15000
+            connection.readTimeout = 15000
+            connection.setRequestProperty("User-Agent", "SPEX-YAR-Android/1.0")
+            val body = connection.inputStream.bufferedReader().use { it.readText() }
+            val results = org.json.JSONArray(body)
+            if (results.length() == 0) throw IllegalArgumentException("مکان «$query» پیدا نشد")
+            val item = results.getJSONObject(0)
+            org.osmdroid.util.GeoPoint(item.getDouble("lat"), item.getDouble("lon"))
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+private suspend fun fetchSpexRoute(
+    start: org.osmdroid.util.GeoPoint,
+    end: org.osmdroid.util.GeoPoint
+): List<org.osmdroid.util.GeoPoint> = withContext(kotlinx.coroutines.Dispatchers.IO) {
+    val address = "https://router.project-osrm.org/route/v1/driving/${start.longitude},${start.latitude};${end.longitude},${end.latitude}?overview=full&geometries=geojson"
+    val connection = java.net.URL(address).openConnection() as java.net.HttpURLConnection
+    try {
+        connection.connectTimeout = 20000
+        connection.readTimeout = 20000
+        val body = connection.inputStream.bufferedReader().use { it.readText() }
+        val routes = org.json.JSONObject(body).getJSONArray("routes")
+        if (routes.length() == 0) throw IllegalStateException("برای این مسیر راهی پیدا نشد")
+        val coordinates = routes.getJSONObject(0).getJSONObject("geometry").getJSONArray("coordinates")
+        (0 until coordinates.length()).map { index ->
+            val pair = coordinates.getJSONArray(index)
+            org.osmdroid.util.GeoPoint(pair.getDouble(1), pair.getDouble(0))
+        }
+    } finally {
+        connection.disconnect()
     }
 }
 
